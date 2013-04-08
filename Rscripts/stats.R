@@ -1,0 +1,17 @@
+x=read.delim("stats.tsv")
+for(i in 1:ncol(x)){
+  if(class(x[[i]])=='factor'){
+    if(x[[i]][1]%in%c('true','false')) x[[i]]=as.logical(x[[i]])
+    else x[[i]]=as.numeric(gsub('f0','',as.character(x[[i]])))
+  }
+}
+par(mfrow=c(3,3))
+plot(x$iter,x$RESID,typ='l')
+plot(x$iter,x$MEME_PVAL,typ='l')
+plot(x$iter,x$STRING_DENS,typ='l')
+plot(x$iter,x$ROWS,typ='l')
+plot(x$iter,x$COLS,typ='l')
+plot(x$iter,x$CLUSTS_PER_ROW,typ='l')
+plot(x$iter,x$CLUSTS_PER_COL,typ='l')
+plot(x$iter,x$N_MOVES,typ='l')
+plot(x$iter,x$N_IMPROVEMENTS,typ='l')
