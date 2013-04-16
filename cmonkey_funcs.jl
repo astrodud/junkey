@@ -259,8 +259,13 @@ function print_cluster_stats(clusters::Dict{Int64,bicluster})
     time_elapsed = (time() - startTime)/60
     ## To get memory used -- DONE: add this to the stats_df; TODO: get this during MEME running (that's when max RAM is used) 
     ## ps -U dreiss --no-headers -o rss -o comm | grep -E 'julia|meme|mast' | awk '{print $1}' | ( tr '\n' + ; echo 0 ) | bc
-    tmp = split( readall(`ps -U dreiss --no-headers -o rss -o comm` | `grep -E 'julia|meme|mast'` | `awk '{print $1}'`), '\n' )
-    tmp = sum([ parse_int(tmp[i]) for i=1:(length(tmp)-1) ])
+    if OS_NAME != :Darwin
+       tmp = split( readall(`ps -U dreiss --no-headers -o rss -o comm` | `grep -E 'julia|meme|mast'` | `awk '{print $1}'`), '\n' )
+       tmp = sum([ parse_int(tmp[i]) for i=1:(length(tmp)-1) ])
+    else
+       tmp = split( readall(`ps -U dreiss -o rss -o comm` | `grep -E 'julia|meme|mast'` | `awk '{print $1}'`), '\n' )
+       tmp = sum([ parse_int(tmp[i]) for i=1:(length(tmp)-1) ])
+    end
     (weight_r, weight_n, weight_m, weight_c, weight_v) = get_score_weights()
     out_df = DataFrame( { "iter" => iter, "time" => time_elapsed, "mem_used" => tmp, 
                          "r0" => weight_r, "n0" => weight_n, "m0" => weight_m, 

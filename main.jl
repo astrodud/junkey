@@ -2,8 +2,8 @@ require( "./cmonkey/requires.jl" ) ## This code will be loaded onto all nodes
 
 ## MAIN PROGRAM
 
-#organism = "Hpy"; k_clust = 75
-organism = "Eco"; k_clust = 350 
+organism = "Hpy"; k_clust = 75
+#organism = "Eco"; k_clust = 350 
 #organism = "Sce"; k_clust = 500
 #organism = "Mpn"; k_clust = 75
 ## TODO: set "default" k_clust if not already set:
