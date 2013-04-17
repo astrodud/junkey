@@ -143,7 +143,7 @@ best_motif = keys(motifs)[findn(values(motifs).==max(values(motifs)))][1]
 seq_hits = [ get(motifs_all_seqs[i][1],best_motif,0) for i=seqs[:,1] ]
 
 addprocs_local(3) ## flakey for interactive sessions!
-require("cmonkey/cmonkey_funcs.jl")
+require("junkey/junkey_funcs.jl")
 seq_hits_rand = @parallel ( vcat ) for i=1:1000
     println(i)
     samp = randival( 1, size(all_seqs,1), size(seqs,1) )

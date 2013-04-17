@@ -17,10 +17,10 @@ end
 function load_ratios( organism )
     ## TODO: make it work for any organism; download the sequence/anno data using HTTP package; 
     ## DONE: try on bigger data; multiple chrome's
-    x=readdlm("./cmonkey/$organism/ratios.tsv",'\t',ASCIIString)
+    x=readdlm("./junkey/$organism/ratios.tsv",'\t',ASCIIString)
     x_rnames=vec(x[2:end,1])
     x_cnames=vec(x[1,2:end])
-    x=readdlm("./cmonkey/$organism/ratios.tsv",'\t',Float32)[2:end,2:end]
+    x=readdlm("./junkey/$organism/ratios.tsv",'\t',Float32)[2:end,2:end]
     println(size(x))
 
 ## Examples for Eco:
@@ -29,7 +29,7 @@ function load_ratios( organism )
 ## tar -xvzf taxdump.tar.gz names.dmp
 ## wget -O genomeInfo.511145.tsv 'http://www.microbesonline.org/cgi-bin/genomeInfo.cgi?tId=511145;export=tab'
 ## wget -O genome.511145.txt 'http://microbesonline.org/cgi-bin/genomeInfo.cgi?tId=511145;export=genome'
-## wget -O STRING_511145.tsv.gz 'http://baliga.systemsbiology.net/cmonkey/data/STRING/511145_STRING.tsv.gz'; gunzip STRING_511145.tsv.gz
+## wget -O STRING_511145.tsv.gz 'http://baliga.systemsbiology.net/junkey/data/STRING/511145_STRING.tsv.gz'; gunzip STRING_511145.tsv.gz
 ## NOTE: extract first 200 columns from a file using cut:
 ##    gunzip -c TanayMSB_GEData.txt.gz | cut -f1-200 | more
 
@@ -52,27 +52,27 @@ end
 
 function load_genome(organism)
     ## DONE: allow for multiple genome seqs (e.g. Halo, Sce)
-    org_files = system(`ls cmonkey/$organism/`)
+    org_files = system(`ls junkey/$organism/`)
     genome_file = org_files[ findfirst( [ begins_with(i,"genome.") for i=org_files ] ) ]
-    genome_seqs = readFastaDNA( "./cmonkey/$organism/$genome_file" );
+    genome_seqs = readFastaDNA( "./junkey/$organism/$genome_file" );
     println(size(genome_seqs))
     genome_seqs
 end
 
 function load_annos(organism)
     ## Load the gene annotations
-    org_files = system(`ls cmonkey/$organism/`)
+    org_files = system(`ls junkey/$organism/`)
     genomeInfo_file = org_files[ findfirst( [ begins_with(i,"genomeInfo.") for i=org_files ] ) ]
-    io = open("./cmonkey/$organism/$genomeInfo_file", "r")
+    io = open("./junkey/$organism/$genomeInfo_file", "r")
     df = DataFrames.read_table( io, '\t', DataFrames.DEFAULT_QUOTATION_CHARACTER, DataFrames.DEFAULT_MISSINGNESS_INDICATORS, true,
                            DataFrames.determine_column_names(io, '\t', DataFrames.DEFAULT_QUOTATION_CHARACTER, true ),
-                           DataFrames.determine_nrows( "./cmonkey/$organism/$genomeInfo_file", true ) ) ## pain in the ass but it works
+                           DataFrames.determine_nrows( "./junkey/$organism/$genomeInfo_file", true ) ) ## pain in the ass but it works
     close( io )
     for i=find([typeof(df[i]) for i=1:size(df,2)].==DataArray{UTF8String,1})
         df[i] = DataArray( convert( Vector{ASCIIString}, df[ i ].data ) )
     end
     anno = df
-#     anno = readdlm("./cmonkey/$organism/$genomeInfo_file", '\t', Any) ##ASCIIString)
+#     anno = readdlm("./junkey/$organism/$genomeInfo_file", '\t', Any) ##ASCIIString)
 #     anno = NamedMatrix{Any}( anno[2:end,2:end], 
 #                             Base.convert(Array{ASCIIString,1},vec(anno[2:end,8])), 
 #                             Base.convert(Array{ASCIIString,1},vec(anno[1,2:end])) )
@@ -92,15 +92,15 @@ end
 
 function load_string_net(organism)
     ## Load the string network
-    org_files = system(`ls cmonkey/$organism/`)
+    org_files = system(`ls junkey/$organism/`)
     string_file = org_files[ findfirst( [ begins_with(i,"STRING") for i=org_files ] ) ]
-    ##df = readdlm("./cmonkey/$organism/$string_file", '\t')
-    io = open("./cmonkey/$organism/$string_file", "r")
+    ##df = readdlm("./junkey/$organism/$string_file", '\t')
+    io = open("./junkey/$organism/$string_file", "r")
     has_header = false
     df = DataFrames.read_table( io, '\t', DataFrames.DEFAULT_QUOTATION_CHARACTER, DataFrames.DEFAULT_MISSINGNESS_INDICATORS, 
                                has_header,
                            DataFrames.determine_column_names(io, '\t', DataFrames.DEFAULT_QUOTATION_CHARACTER, has_header ),
-                           DataFrames.determine_nrows( "./cmonkey/$organism/$string_file", has_header ) ) ## pain in the ass but it works
+                           DataFrames.determine_nrows( "./junkey/$organism/$string_file", has_header ) ) ## pain in the ass but it works
     close( io )
     # df[1] = [ split( df[ i, 1 ], '.' )[ 2 ] for i=1:size( df, 1 ) ]
     # df[2] = [ split( df[ i, 2 ], '.' )[ 2 ] for i=1:size( df, 1 ) ]
@@ -127,7 +127,7 @@ function load_string_net(organism)
     #     println( string_net[find(Base.convert(Array{Bool,1},string_net[:,1].=="MPN391")'&
     #                              Base.convert(Array{Bool,1},string_net[:,2].=="MPN390")'&
     #                              (float32(string_net[:,3]).>=0.9)'),:] )
-    #     ## Try it this way (function defined in cmonkey_funcs.jl)
+    #     ## Try it this way (function defined in junkey_funcs.jl)
     #     ##@time for i=1:100 tmp = get_subnetwork( string_net, "MPN391", "MPN390", float32(0.9) ); end
     # end
     string_net
@@ -136,23 +136,23 @@ end
 function load_op_table(organism)
     ## Now, require the operons table!
     ## DONE? (need to verify): Allow for no operons table (e.g. yeast)
-    org_files = system(`ls cmonkey/$organism/`)
+    org_files = system(`ls junkey/$organism/`)
     op_file = findfirst( [ begins_with(i,"microbesonline_operons_") for i=org_files ] )
     op_table::DataFrame = DataFrame()
-    if op_file > 0 ##filesize("./cmonkey/$organism/$op_file") > 0   ## eukaryotes - no op_file exists!
+    if op_file > 0 ##filesize("./junkey/$organism/$op_file") > 0   ## eukaryotes - no op_file exists!
         op_file = org_files[ op_file ]
-        io = open("./cmonkey/$organism/$op_file", "r")
+        io = open("./junkey/$organism/$op_file", "r")
         has_header = true
         df = DataFrames.read_table( io, '\t', DataFrames.DEFAULT_QUOTATION_CHARACTER, DataFrames.DEFAULT_MISSINGNESS_INDICATORS, has_header,
                                    DataFrames.determine_column_names(io, '\t', DataFrames.DEFAULT_QUOTATION_CHARACTER, has_header ),
-                                   DataFrames.determine_nrows( "./cmonkey/$organism/$op_file", has_header ) ) ## pain in the ass but it works
+                                   DataFrames.determine_nrows( "./junkey/$organism/$op_file", has_header ) ) ## pain in the ass but it works
         close( io )
         df = df[ [ "SysName1", "SysName2", "bOp", "pOp" ] ] ##3, 4, 7, 8 ] ];
         df[ "SysName1" ] = DataArray( convert( Vector{ASCIIString}, df[ "SysName1" ].data ) )
         df[ "SysName2" ] = DataArray( convert( Vector{ASCIIString}, df[ "SysName2" ].data ) )
         df[ "pOp" ] = DataArray( convert( Vector{Float32}, df[ "pOp" ].data ) )
         op_table = df
-        #     op_table = readdlm("./cmonkey/$organism/$op_file", '\t' )[ :, [ 3, 4, 7, 8 ] ];
+        #     op_table = readdlm("./junkey/$organism/$op_file", '\t' )[ :, [ 3, 4, 7, 8 ] ];
         #     tmp_c = vec(op_table[ 1,: ])
         #     tmp_r = vec(op_table[ :,1 ]); tmp_r = tmp_r[ 2:end ]
         #     op_table = NamedMatrix{Any}( op_table[ 2:end,: ], 
@@ -166,22 +166,22 @@ function load_op_table(organism)
     op_table
 end
 
-## Load the cmonkey code as text so it can be stored in the run results
-function load_cmonkey_code(path)
+## Load the junkey code as text so it can be stored in the run results
+function load_junkey_code(path)
     files = system(`ls $path/`)
     files = files[ [ ends_with( f, ".jl" ) for f in files ] ]
     files = files[ files .!= "nanopond-1.9C.jl" ]
-    code = { f => readall( "cmonkey/$f" ) for f in files }
+    code = { f => readall( "junkey/$f" ) for f in files }
     code
 end
 
-function cmonkey_init(organism, k_clust)
+function junkey_init(organism, k_clust)
     println(organism)
 
-    if filesize("cmonkey/$organism/data.jldz") > 0 ## 0 if not exist
-        warn( "Loading data from cmonkey/$organism/data.jldz" )
+    if filesize("junkey/$organism/data.jldz") > 0 ## 0 if not exist
+        warn( "Loading data from junkey/$organism/data.jldz" )
         (organism, k_clust, ratios, genome_seqs, anno, op_table, string_net, 
-         allSeqs_fname, all_bgFreqs, all_genes) = load_jld("cmonkey/$organism/data.jldz"); ##, all_rows
+         allSeqs_fname, all_bgFreqs, all_genes) = load_jld("junkey/$organism/data.jldz"); ##, all_rows
 
         ## Make sure we have written out the sequences file for MAST-ing
         if filesize(allSeqs_fname) <= 0 
@@ -229,7 +229,7 @@ function cmonkey_init(organism, k_clust)
     all_seqs = all_seqs[ find(all_seqs[:,1].!=""), : ] 
     all_seqs_scan = all_seqs_scan[ find(all_seqs_scan[:,1].!=""), : ]
 
-    allSeqs_fname = "cmonkey/$(organism)/allSeqs.fst"
+    allSeqs_fname = "junkey/$(organism)/allSeqs.fst"
     writeFasta( all_seqs_scan, allSeqs_fname ) ## NOTE all_seqs_scan are not used from here on
     
     ##bgCounts = getBgCounts( [genome_seqs,revComp(genome_seqs)], [0:5], true );
@@ -238,7 +238,7 @@ function cmonkey_init(organism, k_clust)
     all_bgCounts = getBgCounts( all_seqs["seq"].data );
     all_bgFreqs = getBgFreqs( all_bgCounts );  ## TODO: bgFreqs are currently not used in MEME-ing OR MAST-ing.
 
-    save_jld( "cmonkey/$organism/data.jldz", (organism, k_clust, ratios, genome_seqs, anno, op_table, string_net, 
+    save_jld( "junkey/$organism/data.jldz", (organism, k_clust, ratios, genome_seqs, anno, op_table, string_net, 
                                           allSeqs_fname, all_bgFreqs, all_genes) ) ##, all_rows
     
     (ratios, genome_seqs, anno, op_table, string_net, ##all_seqs, all_seqs_scan, 

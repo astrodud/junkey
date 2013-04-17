@@ -1,4 +1,4 @@
-require( "./cmonkey/requires.jl" ) ## This code will be loaded onto all nodes
+require( "./junkey/requires.jl" ) ## This code will be loaded onto all nodes
 
 ## MAIN PROGRAM
 
@@ -18,7 +18,7 @@ initialize_constants( organism ) ## update the three constants (above) for organ
 
 if ! isinteractive() stop(); end ## This stuff below should ONLY run on the head node
 
-(ratios, genome_seqs, anno, op_table, string_net, allSeqs_fname, all_bgFreqs, all_genes) = cmonkey_init(organism, k_clust);
+(ratios, genome_seqs, anno, op_table, string_net, allSeqs_fname, all_bgFreqs, all_genes) = junkey_init(organism, k_clust);
 
 if nprocs() > 1 pre_load_cluster_nodes(); end ## send ratios, string_net, k_clust, etc. over to children
 gc()
@@ -31,7 +31,7 @@ else clusters = fill_all_cluster_scores( clusters, true, true ); end
 println( @sprintf( "%.3f", (time() - startTime)/60 ), " minutes since initialization" )
 
 stats_df = DataFrame()
-run_cmonkey()
+run_junkey()
 
 println( "DONE!" )
 endTime = time()
@@ -43,14 +43,14 @@ b = clusters[kInd]
 #b = re_meme_bicluster( b );
 print(join(b.meme_out, '\n'))
 
-## Save cmonkey code for safe keeping
-cmonkey_code = load_cmonkey_code("cmonkey")
+## Save junkey code for safe keeping
+junkey_code = load_junkey_code("junkey")
 
 ## Right now this fails on the clusters if we use gzopen (open works fine, though)
 save_jld( "$(organism)_out.jldz", (organism, k_clust, ratios, genome_seqs, anno, op_table, string_net, 
                                    allSeqs_fname, all_bgFreqs, startTime, endTime,
                                    all_genes, iter, n_iters, distance_search, distance_scan, motif_width_range,
-                                   clusters, stats_df, cmonkey_code) )
+                                   clusters, stats_df, junkey_code) )
 
 clusters_tab = clusters_to_dataFrame(clusters);
 write_table("clusters.tsv", clusters_tab)

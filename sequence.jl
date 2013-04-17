@@ -102,7 +102,7 @@ const DNA_letters = [ 'G', 'A', 'T', 'C' ];
 const DNA_letter_lookup = {'G'=>1, 'A'=>2, 'T'=>3, 'C'=>4 };
 
 function read_iupac()
-    fname = "./cmonkey/IUPAC-dna.txt"
+    fname = "./junkey/IUPAC-dna.txt"
     str = open( fname )
     lines = split( readall( str ), '\n' )
     close( str )
@@ -209,8 +209,8 @@ if false
     close(Astream)
 
     ## try this! file-based, don't even have to read it in!
-    len = filesize("cmonkey/Hpy/genome.85962.txt")
-    seqStream = open("cmonkey/Hpy/genome.85962.txt", "r")
+    len = filesize("junkey/Hpy/genome.85962.txt")
+    seqStream = open("junkey/Hpy/genome.85962.txt", "r")
     seq = mmap_array(Nucleotide, (len,), seqStream)
     println(convert(ASCIIString,seq[500:505]))
 end

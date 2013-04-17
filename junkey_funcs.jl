@@ -1,4 +1,4 @@
-function run_cmonkey()
+function run_junkey()
     global iter, n_iters, clusters, stats_df
 
     n_no_improvements = 0
