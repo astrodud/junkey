@@ -7,9 +7,9 @@
 function initialize_constants( organism ) ## set the constants (above) for organism specific
    global distance_search, distance_scan, motif_width_range
    if organism == "Sce"
-       distance_search = [-250,+30]
-       distance_scan =   [-500,+50]
-       motif_width_range = [6,18]
+       if ! isdefined(:distance_search) distance_search = [-250,+30]; end 
+       if ! isdefined(:distance_scan)   distance_scan =   [-500,+50]; end
+       if ! isdefined(:motif_width_range) motif_width_range = [6,18]; end
    end
    println( "$distance_search  $distance_scan  $motif_width_range" )
 end
@@ -176,10 +176,12 @@ function load_junkey_code(path)
 end
 
 function junkey_init(organism, k_clust)
+    global ratios
     println(organism)
 
+    ## TODO: shouldn't store ratios, k_clust in this file; this is just organism/genome data
     if filesize("junkey/$organism/data.jldz") > 0 ## 0 if not exist
-        warn( "Loading data from junkey/$organism/data.jldz" )
+        warn( "Loading organism data from junkey/$organism/data.jldz" )
         (organism, k_clust, ratios, genome_seqs, anno, op_table, string_net, 
          allSeqs_fname, all_bgFreqs, all_genes) = load_jld("junkey/$organism/data.jldz"); ##, all_rows
 
@@ -193,7 +195,7 @@ function junkey_init(organism, k_clust)
                  allSeqs_fname, all_bgFreqs, all_genes) ) ##, all_rows) ##all_bgCounts, 
     end 
 
-    ratios = load_ratios(organism)
+    if ! isdefined(:ratios) ratios = load_ratios(organism); end
     genome_seqs = load_genome(organism)
     anno = load_annos(organism)
     string_net = load_string_net(organism)
