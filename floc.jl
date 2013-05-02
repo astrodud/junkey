@@ -294,6 +294,7 @@ function do_floc(clusters::Dict{Int64,bicluster})
     changed_cols = sum( [clusters[k].changed[2] for k=1:k_clust] )
     ## First, do the meme/mast-ing in parallel (only if m0 > 0)
     (weight_r, weight_n, weight_m, weight_c, weight_v) = get_score_weights()
+    clusters = re_seed_all_clusters_if_necessary(clusters) ## avoid meme-ing 0-gene clusters
     if weight_m > 0 
         if nprocs() <= 1 clusters = re_meme_all_biclusters(clusters, false)
         else clusters = re_meme_all_biclusters_parallel(clusters, false); end
