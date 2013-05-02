@@ -2,23 +2,29 @@ require( "./junkey/requires.jl" ) ## This code will be loaded onto all nodes
 
 ## MAIN PROGRAM
 
-organism = "Hpy"; k_clust = 75
-#organism = "Eco"; k_clust = 350 
-#organism = "Sce"; k_clust = 500
-#organism = "Mpn"; k_clust = 75
-## TODO: set "default" k_clust if not already set:
-##k_clust = round( size( ratios, 1 ) / 10 )
-iter = 1
-n_iters = 100
+if ! isdefined(:organism)
+    #organism = "Hpy"; k_clust = 75
+    organism = "Eco"; k_clust = 450 
+    #organism = "Sce"; k_clust = 500
+    #organism = "Mpn"; k_clust = 75
+end
 
-distance_search = [-150,+20] ## these are defaults (for microbes)
-distance_scan =   [-250,+50]
-motif_width_range = [6,24]
+iter = 1
+
+if ! isdefined(:n_iters) n_iters = 100; end
+
+## these are defaults (for microbes):
+if ! isdefined(:distance_search) distance_search = [-150,+20]; end 
+if ! isdefined(:distance_scan)   distance_scan =   [-250,+50]; end
+if ! isdefined(:motif_width_range) motif_width_range = [6,24]; end
 initialize_constants( organism ) ## update the three constants (above) for organism specific (e.g. yeast)
 
 if ! isinteractive() stop(); end ## This stuff below should ONLY run on the head node
 
 (ratios, genome_seqs, anno, op_table, string_net, allSeqs_fname, all_bgFreqs, all_genes) = junkey_init(organism, k_clust);
+
+## DONE: set "default" k_clust if not already set:
+if ! isdefined(:k_clust) k_clust = round( size( ratios, 1 ) / 10 ); end
 
 if nprocs() > 1 pre_load_cluster_nodes(); end ## send ratios, string_net, k_clust, etc. over to children
 gc()
