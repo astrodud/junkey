@@ -8,3 +8,12 @@ and [Distributions](https://github.com/JuliaStats/Distributions.jl) packages.
 
 Fails with obscure errors on Julia 0.2.0.
 
+<a name="Running"/>
+
+Change to the directory **containing** the junkey directory and start julia
+
+in Julia, 
+
+   julia> load("junkey/main.jl")
+
+will run on the default (H. pylori), 100 iterations. Will take ~an hour.
