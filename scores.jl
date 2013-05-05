@@ -10,11 +10,11 @@
 function get_score_weights(iter)
     global n_iters, ratios
     weight_r =  1.0
-    weight_n = -0.9 * float32(iter-1) / n_iters   ## increase linearly from 0 at iter=1 to 0.9
-    weight_m =  1.8 * float32(iter-1) / n_iters * ((iter<=5) ? 0 : 1) ## ramp up from 0 to 1.3 starting at iter=6
+    weight_n = -0.1 * float32(iter-1) / n_iters   ## increase linearly from 0 at iter=1 to 0.9
+    weight_m =  0.3 * float32(iter-1) / n_iters * ((iter<=5) ? 0 : 1) ## ramp up from 0 to 1.8 starting at iter=6
     weight_c =  1.0 * size(ratios,1)/size(ratios,2)/12.0 ## ??? ## 1.2 works good for hpy
-    weight_v =  0.1 + 0.7 * float32(iter-1) / n_iters  ## ramp up from 0.3 to 1
-    weight_g =  0.1 + 0.7 * float32(iter-1) / n_iters  ## ramp up from 0.3 to 1
+    weight_v =  0.1 + 0.3 * float32(iter-1) / n_iters  ## ramp up from 0.3 to 0.8
+    weight_g =  0.1 + 0.1 * float32(iter-1) / n_iters  ## ramp up from 0.3 to 0.8
     (weight_r, weight_n, weight_m, weight_c, weight_v, weight_g)
 end
 
@@ -71,7 +71,7 @@ end
 
 ## Scores for number of clusters each gene is in
 function get_cluster_row_count_scores( counts_g::Vector{Int32} )
-    const thresh = 2.0 ## ## lower is better; coerce removing if gene is in more than 2 clusters
+    const thresh = 3.0 ## ## lower is better; coerce removing if gene is in more than 2 clusters
     float32(counts_g - thresh)
 end
 

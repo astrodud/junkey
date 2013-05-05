@@ -1,3 +1,4 @@
+########## UTILITY FUNCTIONS ################################################################################
 
 function save_jld(fname, tuple)
     io = GZip.gzopen(fname, "w") ## I get an error right now using gzopen
@@ -26,78 +27,7 @@ end
 
 source = load ## I keep getting hitched up with this so create an alias
 
-########## NamedMatrix FUNCTIONS ################################################################################
-
-##require( "base.jl" ) ## required to overrequire 'size' and other funcs
-import Base.size, Base.ndims, Base.print_matrix, Base.isnan, Base.ref, Base.convert
-
 const NA = float32( 0 / 0 )
-
-## But do still need to implement indexing x by the value output from findn()
-function ref(x::Matrix, inds::(Array{Int64,1},Array{Int64,1}))
-    o=Array(typeof(x[1]),size(inds[1],1))
-    for i=1:size(inds[1],1)
-        o[i]=x[inds[1][i],inds[2][i]]
-    end
-    o
-end
-
-size(x::NamedMatrix,ind::Int64) = size(x.x,ind)
-size(x::NamedMatrix) = size(x.x)
-nrow(x::NamedMatrix) = size(x,1)
-ncol(x::NamedMatrix) = size(x,2)
-ndims(x::NamedMatrix) = ndims(x.x)
-function print_matrix(IOStream,x::NamedMatrix) 
-    print_matrix(IOStream,x.x) ## Update it to print row/col names too
-    println()
-    println(IOStream,x.rnames)
-    println(IOStream,x.cnames)
-end
-
-ref(x::NamedMatrix, i::ASCIIString, j::ASCIIString) = x.x[x.rnames[i],x.cnames[j]]
-ref(x::NamedMatrix, I::Vector{ASCIIString}, J::Vector{ASCIIString}) =
-                   NamedMatrix{eltype(x.x)}( [ x[i,j] for i=I, j=J ], I, J )
-ref(x::NamedMatrix, i::ASCIIString, J::Vector{ASCIIString}) = x[[i],J]
-ref(x::NamedMatrix, I::Vector{ASCIIString}, j::ASCIIString) = x[I,[j]]
-ref(x::NamedMatrix, i::Range1{Int64}, j::ASCIIString) = x.x[i,x.cnames[j]]
-ref(x::NamedMatrix, i::ASCIIString, j::Range1{Int64}) = x.x[x.rnames[i],j]
-ref(x::NamedMatrix, i::Int64, j::ASCIIString) = x.x[i,x.cnames[j]]
-ref(x::NamedMatrix, i::ASCIIString, j::Int64) = x.x[x.rnames[i],j]
-## How to allow combos of string vectors and int indexes? Seems complicated.
-## How to allow combos of string vectors and ranges? Seems complicated.
-## How to allow combos of int vectors and/or ranges and/or int indexes? Seems complicated.
-
-function rownames{T<:NamedMatrix}( x::T ) ## Could be faster but this is easy as long as its not called too often
-    #d = reverse_dict( x.rnames )
-    #out = [ d[i] for i=1:length(d) ]
-    #convert( Array{ASCIIString,1}, out )
-    ##keys(x.rnames)[order(values(x.rnames))] ## faster!
-    keyz = Array(ASCIIString, length(x.rnames))      ## faster still!!
-    valz = Array(Int64, length(x.rnames))
-    i = 0
-    for (k,v) in x.rnames 
-        keyz[i+=1] = k 
-        valz[i] = v
-    end
-    keyz[order(valz)]
-end
-
-function colnames{T<:NamedMatrix}( x::T ) ## Could be faster but this is easy as long as its not called too often
-    #d = reverse_dict( x.cnames )
-    #out = [ d[i] for i=1:length(d) ]
-    #convert( Array{ASCIIString,1}, out )
-    #keys(x.cnames)[order(values(x.cnames))] ## faster!
-    keyz = Array(ASCIIString, length(x.cnames))     ## faster still!!
-    valz = Array(Int64, length(x.cnames))
-    i = 0
-    for (k,v) in x.cnames 
-        keyz[i+=1] = k 
-        valz[i] = v
-    end
-    keyz[order(valz)]
-end
-
-########## UTILITY FUNCTIONS ################################################################################
 
 stop() = error( "STOPPING ON PURPOSE" )
 
@@ -231,7 +161,7 @@ end
 
 ## Whew, this is the best way I could find to get rowmeans, rowsds, ignoring NaNs:
 ## can use amap(f,x,1) to apply f to rows of x but for some reason this isnan() doesn't work with amap():
-isnan{T}(x::Array{T}) = map( isnan, x )
+#isnan{T}(x::Array{T}) = map( isnan, x )
 
 ##nanmean(x::Array{Float32}) = mean( x[ ! isnan( x ) ] )
 

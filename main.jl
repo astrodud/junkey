@@ -3,8 +3,8 @@ require( "./junkey/requires.jl" ) ## This code will be loaded onto all nodes
 ## MAIN PROGRAM
 
 if ! isdefined(:organism)
-    #organism = "Hpy"; k_clust = 75
-    organism = "Eco"; k_clust = 450 
+    organism = "Hpy"; k_clust = 75
+    #organism = "Eco"; k_clust = 450 
     #organism = "Sce"; k_clust = 500
     #organism = "Mpn"; k_clust = 75
 end

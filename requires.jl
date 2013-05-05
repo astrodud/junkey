@@ -3,16 +3,17 @@ using Distributions
 #import Distributions.sample
 using DataFrames
 #using Clustering  ## will use this after upgrade to 0.2.0
-using GZip  
+using GZip
 
 try
-    reload( "./junkey/types.jl" ) ## at end so this file can be reload()-ed without an error
+    reload( "./junkey/NamedMatrix.jl" ) ## catch it so the rest of this file can be reload()-ed without an error
+    reload( "./junkey/Bicluster.jl" )
+    require( "./junkey/ArrayView.jl" )
 catch x
-    println( "Not re-loading types.jl" )
+    println( "Not re-loading types" )
     println( x )
 end
 
-require( "./junkey/ArrayView.jl" )
 require( "./junkey/util.jl" )
 require( "./junkey/kmeans.jl" )
 require( "./junkey/funcs.jl" )
@@ -22,6 +23,6 @@ require( "./junkey/init.jl" )
 require( "./junkey/sequence.jl" )
 require( "./junkey/floc.jl" )
 require( "./junkey/gibbs-sampler-mult.jl" )
-require( "./junkey/meme.jl" ) ## run meme on most "flagellar-enriched" cluster
+require( "./junkey/meme.jl" )
 
 gc()
