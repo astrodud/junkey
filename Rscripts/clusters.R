@@ -5,8 +5,8 @@ debug.on()
 
 x=read.delim("clusters.tsv")
 for (i in c('resid','dens_string','meanp_meme')) x[[i]] = as.numeric(gsub('f0','',as.character(x[[i]])))
-e=cmonkey.init(organism='hpy', bg.order=0, k.clust=nrow(x), ratios='~/scratch/julia/cmonkey/Hpy/ratios.tsv')
-#e=cmonkey.init(organism='eco', bg.order=0, k.clust=nrow(x), ratios='~/scratch/julia/cmonkey/Eco/ratios.tsv', n.motifs=2)
+#e=cmonkey.init(organism='hpy', bg.order=0, k.clust=nrow(x), ratios='~/scratch/julia/junkey/Hpy/ratios.tsv', n.motifs=2, discard.genome=F)
+e=cmonkey.init(organism='eco', bg.order=0, k.clust=nrow(x), ratios='~/scratch/julia/junkey/Eco/ratios.tsv', n.motifs=2, discard.genome=F)
 e$cmonkey.re.seed( e )
 sys.source("~/scratch/biclust/cmonkey-funcs.R",envir=e,chdir=T)
 e$row.score.func='default'
@@ -30,7 +30,7 @@ tmp = mclapply(1:nrow(x), function(i){
   clust = e$clusterStack[[i]]
   clust$rows = rows
   clust$cols = cols
-  clust$resid=x$resid[1]
+  clust$resid=x$resid[i]
   meme.out = strsplit(as.character(x$meme_out[i]),"<<<<>>>>")[[1]]
   if ( length( meme.out ) > 0 ) clust$meme.out = e$getMemeMotifInfo( meme.out )
   else clust$meme.out = NULL
