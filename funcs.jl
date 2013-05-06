@@ -108,7 +108,6 @@ function fill_cluster_scores(clust::bicluster, iter::Int64, force::Bool)
         clust = get_cluster_expr_rowcol_scores( clust, ratios ) ## Actually need to do it for rows too, even if only cols changed
     end
     if force || clust.changed[1] ## rows only
-        #println("HERE! $(clust.k) CHANGED = $(clust.changed)")
         if abs(weight_n) > 0 clust = get_cluster_network_row_scores( clust, string_net ); end
         if weight_m > 0 clust = get_cluster_meme_row_scores( clust ); end 
     end 
@@ -186,7 +185,6 @@ end
 
 function fill_cluster_scores(x::Dict{Any,Any}) 
     k = x["k"]
-    #println( "HERE: $k" )
     iter = x["iter"]
     b = x["biclust"]
     fill_cluster_scores(b, iter, false)   ### note changed force to false; this may be buggy
@@ -237,8 +235,9 @@ clusters_w_func( func, clusters ) = clusters_w_func( func, clusters, 1 )
 function clusters_w_func( func::ASCIIString, clusters, n_best )
     global anno, ratios
     inds = findn([ismatch(Regex(func),anno["desc"][i]) for i=1:size(anno,1)])
-    inds2 = int32([contains(rownames(ratios), anno["sysName"][i]) ? 
-                   findn(rownames(ratios) .== anno["sysName"][i])[1] : 0 for i=inds])
+    r_rownames = rownames(ratios)
+    inds2 = int32([contains(r_rownames, anno["sysName"][i]) ? 
+                   findn(r_rownames .== anno["sysName"][i])[1] : 0 for i=inds])
     inds2 = inds2[ inds2 .!= 0 ]
 
     ord = order( int64([length(findin(clusters[k].rows,int64(inds2))) for k=1:length(clusters)]) )
@@ -246,7 +245,7 @@ function clusters_w_func( func::ASCIIString, clusters, n_best )
     ##kInd = findmax(int64([length(findin(clusters[k].rows,int64(inds2))) for k=1:length(clusters)]))[ 2 ]  
     
     for kInd in kInds
-        genes = rownames(ratios)[clusters[kInd].rows] ##rows]
+        genes = r_rownames[clusters[kInd].rows] ##rows]
         ##println(genes) ## print the genes
         genes = genes[ findin(genes, anno["sysName"].data) ]
         println(kInd, "\n", anno[in(anno["sysName"].data,genes),["sysName","desc"]])

@@ -8,7 +8,7 @@ using GZip
 try
     reload( "./junkey/NamedMatrix.jl" ) ## catch it so the rest of this file can be reload()-ed without an error
     reload( "./junkey/Bicluster.jl" )
-    ##require( "./junkey/ArrayView.jl" )
+    require( "./junkey/ArrayView.jl" )
 catch x
     println( "Not re-loading types" )
     println( x )
@@ -22,7 +22,7 @@ require( "./junkey/init.jl" )
 #require( "./junkey/kmeans2.jl" )
 require( "./junkey/sequence.jl" )
 require( "./junkey/floc.jl" )
-require( "./junkey/gibbs-sampler-mult.jl" )
+#require( "./junkey/gibbs-sampler-mult.jl" )
 require( "./junkey/meme.jl" )
 
 gc()

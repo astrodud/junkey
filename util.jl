@@ -101,6 +101,15 @@ end
 #     return a
 # end
 
+## note [a, [item]] works just as fast as this:
+# function append{T}(a::Array{T,1}, item::T)
+#     out = Array(T,length(a)+1)
+#     i = 0
+#     for x = a out[ i += 1 ] = x; end
+#     out[end] = item
+#     out
+# end
+
 function in{T}(a::Array{T}, b::Array{T})  ## in(a,b) same as a%in%b in R
     out = falses(length(a))
     for i = 1:length(a)

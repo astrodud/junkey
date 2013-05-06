@@ -21,10 +21,11 @@ function re_meme_all_biclusters_parallel( clusters::Dict{Int64,bicluster}, force
     global k_clust, allSeqs_fname, iter, n_iters
     data::Array{Any,1} = []
     n_motifs = get_n_motifs( iter, n_iters )
+    r_rownames = rownames(ratios)
     for k in 1:k_clust
         b = clusters[k]
         if ! force && ! b.changed[1] continue; end ## If rows not changed, skip it
-        seqs = get_sequences( rownames(ratios)[b.rows] ) 
+        seqs = get_sequences( r_rownames[b.rows] ) 
         dat = { "k" => b.k, "seqs" => seqs, "allSeqs_fname" => allSeqs_fname, "n_motifs" => n_motifs };
         push!( data, dat )
     end

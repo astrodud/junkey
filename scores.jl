@@ -10,8 +10,8 @@
 function get_score_weights(iter)
     global n_iters, ratios
     weight_r =  1.0
-    weight_n =  0.0 * float32(iter-1) / n_iters   ## increase linearly from 0 at iter=1 to 0.9
-    weight_m =  0.0 * float32(iter-1) / n_iters * ((iter<=5) ? 0 : 1) ## ramp up from 0 to 1.8 starting at iter=6
+    weight_n = -0.1 * float32(iter-1) / n_iters   ## increase linearly from 0 at iter=1 to 0.9
+    weight_m =  0.3 * float32(iter-1) / n_iters * ((iter<=5) ? 0 : 1) ## ramp up from 0 to 1.8 starting at iter=6
     weight_c =  1.0 * size(ratios.x,1)/size(ratios.x,2)/12.0 ## ??? ## 1.2 works good for hpy
     weight_v =  0.1 + 0.3 * float32(iter-1) / n_iters  ## ramp up from 0.3 to 0.8
     weight_g =  0.1 + 0.1 * float32(iter-1) / n_iters  ## ramp up from 0.3 to 0.8
@@ -101,44 +101,40 @@ function get_cluster_expr_rowcol_scores{T}( b::bicluster, x::NamedMatrix{T} ) ##
     rows=b.rows; cols=b.cols; score_r=b.scores_r; score_c=b.scores_c
 
     ##const bsize = length(rows)*length(cols)
-    const vr::T = bicluster_var( b, x )
+    const vr = bicluster_var( b, x )
     resid = bicluster_residue( b, x )
 
-    xx::Matrix{T}=x.x[:,cols] ## This uses less RAM than previous version; about same speed
-    ##xx::ArrayView{Float32,2,Array{Float32,2},(Array{Int64,1},Array{Int64,1})}=view(x.x,[1:size(x.x,1)],cols) ## This uses less RAM; perhaps a tiny bit slower
-    mn::Vector{T}=colmeans(xx[rows,:])
-    x2::Matrix{T}=similar(xx) ## Get the full matrix; subtract the mean biclust profile
+    ##xx::Matrix{T} = x.x[:,cols] ## This uses less RAM than previous version; about same speed
+    xx::ArrayView{Float32,2,Array{Float32,2},(Array{Int64,1},Array{Int64,1})}=view(x.x,[1:size(x.x,1)],cols) ## This uses less RAM; perhaps a tiny bit slower
+    mn::Vector{T} = colmeans(xx[rows,:])
+    x2::Matrix{T} = similar(xx) ## Get the full matrix; subtract the mean biclust profile
     for i=1:size(x2,2) x2[:,i] = xx[:,i] - mn[i]; end
     
     ## Get changes in variance for adding/removing rows; normalize by change
     ## in cluster volume. Lower is better!
     ##v_factor::T = length(cols) / bsize
     if length(score_r) == 0 score_r = Array(T,size(x.x,1)); end
-    isIn::Bool = false
-    newR::Vector{Int64} = []
-    newvr::T = 0.
     tmpVec::Vector{T} = Array(T, size(xx,2))
     for r in 1:size(x.x,1) ## Iterate over rows
        isIn = contains(rows, r) ##any(rows .== r) ## r is in the bicluster
-       newR = isIn ? remove(rows,r) : [rows,r] ## CANT DO: prevent reallocation of vector here?
+       newR = isIn ? remove(rows,r) : [rows, [r]] ##append(rows, r) ##[rows,r] ## CANT DO: prevent reallocation of vector here?
        newvr = nanvar(x2[newR,:]) / ( nanvar(colmeans(xx[newR,:], tmpVec)) + var_add ) ## DONE -- prevent realloc of matrix here
        ## NOTE: the colmeans() above is the slow part here -- convince yourself that you need it!
        score_r[r] = ( newvr - vr ) #/ (vr+0.01) ##+ ( isIn ? v_factor : -v_factor )
     end
 
     #println("IN HERE: COL")
-    xx=x.x[rows,:]
-    ##xx=view(x.x,rows,[1:size(x.x,2)])
+    ##xx=x.x[rows,:]
+    xx=view(x.x,rows,[1:size(x.x,2)])
     mn=colmeans(xx)
     x2=similar(xx) ## Get the full matrix; subtract the mean biclust profile
     for i=1:size(x2,2) x2[:,i] = xx[:,i] - mn[i]; end
 
     ##v_factor = length(rows) / bsize
     if length(score_c) == 0 score_c = Array(T,size(x.x,2)); end
-    newC::Vector{Int64} = [];
     for c in 1:size(x.x,2) ## Iterate over cols
        isIn = contains(cols, c) ##any(cols .== c) ## c is in the bicluster
-       newC = isIn ? remove(cols,c) : [cols,c]
+       newC = isIn ? remove(cols,c) : [cols, [c]] ##append(cols, c) ##[cols,c]
        newvr = nanvar(x2[:,newC]) / ( nanvar(mn[newC]) + var_add )
        score_c[c] = ( newvr - vr ) #/ (vr+0.01) ##+ ( isIn ? v_factor : -v_factor )
     end
@@ -159,7 +155,8 @@ function get_cluster_network_row_scores( b::bicluster, network::DataFrame )
     global ratios, all_genes
     #println("IN HERE: NET SCORES $(b.k)")
     ## Note that right now rows in the bicluster is the index into the rownames of the expression matrix!!! TODO: change this!
-    rows::Vector{ASCIIString} = rownames(ratios)[b.rows] ##keys( all_genes )[ in( values( all_genes ), b.rows ) ]
+    r_rownames = rownames(ratios)
+    rows::Vector{ASCIIString} = r_rownames[b.rows] ##keys( all_genes )[ in( values( all_genes ), b.rows ) ]
     net = sub( network, findin( network["x1"], rows ) ) ## Assume network is symmetric!
     grps = groupby( net, "x2" ) ## each group is a subnetwork with all genes in bicluster (x1) connected to a given gene
     grpnames = convert( Vector{ASCIIString}, [ grps[i]["x2"][1] for i=1:length( grps ) ] ) ## the given gene for each group
@@ -172,10 +169,8 @@ function get_cluster_network_row_scores( b::bicluster, network::DataFrame )
 
     score_n = b.scores_n
     if length(score_n) == 0 score_n = Array(Float32,size(ratios.x,1)); end    
-    isIn::Bool = false
-    newR::Vector{ASCIIString} = []
     new_dens::Float32 = 0.
-    for r in rownames(ratios)
+    for r in r_rownames
         isIn = contains(rows, r) 
         if isIn ## r is in the bicluster -- remove the node from the bicluster-only subnetwork and recalc the density
             newR = remove(rows,r)
@@ -203,8 +198,8 @@ function get_cluster_meme_row_scores( b::bicluster )
 
     score_m = b.scores_m
     if length(score_m) == 0 score_m = Array(Float32,size(ratios.x,1)); end
-    isIn::Bool = false
-    genes = rownames(ratios)[b.rows]
+    r_rownames = rownames(ratios)
+    genes = r_rownames[b.rows]
     ## TODO: don't only use values for genes that are in the ratios matrix.
     ## DONE: make mast_out into a DataFrame for easier searching, subsetting
     if size(b.mast_out,1) <= 0
@@ -216,11 +211,11 @@ function get_cluster_meme_row_scores( b::bicluster )
     mn::Float32 = nanmean( log10( df["P-value"].data ) )
     pvals::Dict{ASCIIString,Float32} = Dict{ASCIIString,Float32}()
     for i in 1:size(b.mast_out,1) pvals[b.mast_out["Gene"].data[i]] = b.mast_out["P-value"].data[i]; end
-    not_there = rownames(ratios)[ ! in(rownames(ratios), b.mast_out["Gene"].data) ]
+    not_there = r_rownames[ ! in(r_rownames, b.mast_out["Gene"].data) ]
     for r in not_there pvals[r] = NA; end
-    for g in rownames(ratios) ## Iterate over rows
+    for g in r_rownames ## Iterate over rows
        isIn = contains(genes, g) ##any(rows .== r) ## r is in the bicluster
-       newR = isIn ? remove(genes,g) : [genes,g]
+       newR = isIn ? remove(genes,g) : [genes,[g]]
        pvs = float32( [ pvals[r] for r in newR ] )
        # pvs = df["P-value"].data
        # if isIn pvs = sub( df, df["Gene"].data .!= g )["P-value"].data

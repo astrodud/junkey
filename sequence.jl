@@ -120,10 +120,10 @@ end
 
 const iupac_dict = read_iupac();
 
-function collect_add_dicts( a, b ) ## Add up all elements into output dict
-    for k in keys(b) a[k] = get(a,k,0) + b[k]; end
-    a
-end
+# function collect_add_dicts( a, b ) ## Add up all elements into output dict
+#     for (k,v) in b a[k] = v + b[k]; end
+#     a
+# end
 
 #@profile begin
 ## Note this will not have an entry for subseqs that don't exist in the sequence
@@ -159,7 +159,7 @@ getBgCounts( seq::ASCIIString ) = getBgCounts( [seq] );
 
 ## Convert counts dictionary into frequencies; divide counts for each k-mer by the total for that given k.
 function getBgFreqs( bgCounts::Dict{ASCIIString,Int64} )
-    k = keys( bgCounts )
+    k = collect(keys( bgCounts ))
     nc = [ length(k[i]) for i=1:length(k) ]
     d = Dict{ASCIIString,Float64}()
     for i=1:max(nc)
