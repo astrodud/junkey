@@ -22,4 +22,4 @@ bicluster( k, rows::Vector, cols::Vector ) = bicluster( k, rows, cols,
                                  Array(Float32,0), Array(Float32,0), Array(Float32,0), 
                                  Array(Float32,0), Array(ASCIIString,0), DataFrame(), trues(2) )
 
-bicluster( k, rows::Vector, x::NamedMatrix ) = bicluster( k, rows, unique(randi(size(x,2),div(size(x,2),2))) )
+bicluster( k, rows::Vector, x::NamedMatrix ) = bicluster( k, rows, unique(randi(size(x.x,2),div(size(x.x,2),2))) )

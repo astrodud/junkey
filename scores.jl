@@ -10,9 +10,9 @@
 function get_score_weights(iter)
     global n_iters, ratios
     weight_r =  1.0
-    weight_n = -0.1 * float32(iter-1) / n_iters   ## increase linearly from 0 at iter=1 to 0.9
-    weight_m =  0.3 * float32(iter-1) / n_iters * ((iter<=5) ? 0 : 1) ## ramp up from 0 to 1.8 starting at iter=6
-    weight_c =  1.0 * size(ratios,1)/size(ratios,2)/12.0 ## ??? ## 1.2 works good for hpy
+    weight_n =  0.0 * float32(iter-1) / n_iters   ## increase linearly from 0 at iter=1 to 0.9
+    weight_m =  0.0 * float32(iter-1) / n_iters * ((iter<=5) ? 0 : 1) ## ramp up from 0 to 1.8 starting at iter=6
+    weight_c =  1.0 * size(ratios.x,1)/size(ratios.x,2)/12.0 ## ??? ## 1.2 works good for hpy
     weight_v =  0.1 + 0.3 * float32(iter-1) / n_iters  ## ramp up from 0.3 to 0.8
     weight_g =  0.1 + 0.1 * float32(iter-1) / n_iters  ## ramp up from 0.3 to 0.8
     (weight_r, weight_n, weight_m, weight_c, weight_v, weight_g)
@@ -104,8 +104,8 @@ function get_cluster_expr_rowcol_scores{T}( b::bicluster, x::NamedMatrix{T} ) ##
     const vr::T = bicluster_var( b, x )
     resid = bicluster_residue( b, x )
 
-    ##xx::Matrix{T}=x.x[:,cols] ## This uses less RAM than previous version; about same speed
-    xx::ArrayView{Float32,2,Array{Float32,2},(Array{Int64,1},Array{Int64,1})}=view(x.x,[1:size(x.x,1)],cols) ## This uses less RAM; perhaps a tiny bit slower
+    xx::Matrix{T}=x.x[:,cols] ## This uses less RAM than previous version; about same speed
+    ##xx::ArrayView{Float32,2,Array{Float32,2},(Array{Int64,1},Array{Int64,1})}=view(x.x,[1:size(x.x,1)],cols) ## This uses less RAM; perhaps a tiny bit slower
     mn::Vector{T}=colmeans(xx[rows,:])
     x2::Matrix{T}=similar(xx) ## Get the full matrix; subtract the mean biclust profile
     for i=1:size(x2,2) x2[:,i] = xx[:,i] - mn[i]; end
@@ -113,12 +113,12 @@ function get_cluster_expr_rowcol_scores{T}( b::bicluster, x::NamedMatrix{T} ) ##
     ## Get changes in variance for adding/removing rows; normalize by change
     ## in cluster volume. Lower is better!
     ##v_factor::T = length(cols) / bsize
-    if length(score_r) == 0 score_r = Array(T,size(x,1)); end
+    if length(score_r) == 0 score_r = Array(T,size(x.x,1)); end
     isIn::Bool = false
     newR::Vector{Int64} = []
     newvr::T = 0.
     tmpVec::Vector{T} = Array(T, size(xx,2))
-    for r in 1:size(x,1) ## Iterate over rows
+    for r in 1:size(x.x,1) ## Iterate over rows
        isIn = contains(rows, r) ##any(rows .== r) ## r is in the bicluster
        newR = isIn ? remove(rows,r) : [rows,r] ## CANT DO: prevent reallocation of vector here?
        newvr = nanvar(x2[newR,:]) / ( nanvar(colmeans(xx[newR,:], tmpVec)) + var_add ) ## DONE -- prevent realloc of matrix here
@@ -127,16 +127,16 @@ function get_cluster_expr_rowcol_scores{T}( b::bicluster, x::NamedMatrix{T} ) ##
     end
 
     #println("IN HERE: COL")
-    ##xx=x.x[rows,:]
-    xx=view(x.x,rows,[1:size(x.x,2)])
+    xx=x.x[rows,:]
+    ##xx=view(x.x,rows,[1:size(x.x,2)])
     mn=colmeans(xx)
     x2=similar(xx) ## Get the full matrix; subtract the mean biclust profile
     for i=1:size(x2,2) x2[:,i] = xx[:,i] - mn[i]; end
 
     ##v_factor = length(rows) / bsize
-    if length(score_c) == 0 score_c = Array(T,size(x,2)); end
+    if length(score_c) == 0 score_c = Array(T,size(x.x,2)); end
     newC::Vector{Int64} = [];
-    for c in 1:size(x,2) ## Iterate over cols
+    for c in 1:size(x.x,2) ## Iterate over cols
        isIn = contains(cols, c) ##any(cols .== c) ## c is in the bicluster
        newC = isIn ? remove(cols,c) : [cols,c]
        newvr = nanvar(x2[:,newC]) / ( nanvar(mn[newC]) + var_add )
@@ -171,7 +171,7 @@ function get_cluster_network_row_scores( b::bicluster, network::DataFrame )
     n2::PooledDataArray{ASCIIString,1} = net2["x2"] ##Vector{ASCIIString} = net2[2]
 
     score_n = b.scores_n
-    if length(score_n) == 0 score_n = Array(Float32,size(ratios,1)); end    
+    if length(score_n) == 0 score_n = Array(Float32,size(ratios.x,1)); end    
     isIn::Bool = false
     newR::Vector{ASCIIString} = []
     new_dens::Float32 = 0.
@@ -202,13 +202,13 @@ function get_cluster_meme_row_scores( b::bicluster )
     #println("IN HERE: MOT SCORES $(b.k)")
 
     score_m = b.scores_m
-    if length(score_m) == 0 score_m = Array(Float32,size(ratios,1)); end
+    if length(score_m) == 0 score_m = Array(Float32,size(ratios.x,1)); end
     isIn::Bool = false
     genes = rownames(ratios)[b.rows]
     ## TODO: don't only use values for genes that are in the ratios matrix.
     ## DONE: make mast_out into a DataFrame for easier searching, subsetting
     if size(b.mast_out,1) <= 0
-        b.scores_m = float32( zeros( size(ratios,1) ) )
+        b.scores_m = float32( zeros( size(ratios.x,1) ) )
         b.meanp_meme = NA
         return( b )
     end

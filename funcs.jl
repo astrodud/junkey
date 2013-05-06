@@ -197,7 +197,7 @@ function get_cluster_row_counts( clusters::Dict{Int64,bicluster} )
     global ratios
     counts::Vector{Int32} = []
     if length(clusters[1].scores_r) > 0 counts = zeros(Int32, length(clusters[1].scores_r)) ## beginning - empty clusters
-    else counts = zeros(Int32, size(ratios,1)); end
+    else counts = zeros(Int32, size(ratios.x,1)); end
     for k in 1:length(clusters) for r in clusters[k].rows counts[r] += 1; end; end
     counts
 end
@@ -286,11 +286,11 @@ function print_cluster_stats(clusters::Dict{Int64,bicluster})
     out_df["MEME_PVAL"] = nanmean(tmp)
     println( "MEAN MEME LOG10(P-VAL): ", out_df["MEME_PVAL"], " +/- ", nansd(tmp) )
     rows = 0; for k in 1:k_clust rows = [rows, clusters[k].rows]; end
-    tmp = float32(values(table(rows)))
+    tmp = float32(collect(values(table(rows))))
     out_df["CLUSTS_PER_ROW"] = nanmean(tmp)
     println( "CLUSTS PER ROW: ", out_df["CLUSTS_PER_ROW"], " +/- ", nansd(tmp) )
     cols = 0; for k in 1:k_clust cols = [cols, clusters[k].cols]; end
-    tmp = float32(values(table(cols)))
+    tmp = float32(collect(values(table(cols))))
     out_df["CLUSTS_PER_COL"] = nanmean(tmp)
     println( "CLUSTS PER COL: ", out_df["CLUSTS_PER_COL"], " +/- ", nansd(tmp) )
     out_df

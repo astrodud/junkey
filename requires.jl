@@ -8,7 +8,7 @@ using GZip
 try
     reload( "./junkey/NamedMatrix.jl" ) ## catch it so the rest of this file can be reload()-ed without an error
     reload( "./junkey/Bicluster.jl" )
-    require( "./junkey/ArrayView.jl" )
+    ##require( "./junkey/ArrayView.jl" )
 catch x
     println( "Not re-loading types" )
     println( x )

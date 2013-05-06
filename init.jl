@@ -217,7 +217,7 @@ function junkey_init(organism, k_clust)
     end
     println(length(all_genes))
 
-    gene_regex = get_regex(keys(all_genes))
+    gene_regex = get_regex(collect(keys(all_genes)))
     println(gene_regex)
     
     ##all_rows::Vector{Int} = [ all_genes[ g ] for g in rownames(x) ] ##pre-define this (not used anymore?)
