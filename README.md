@@ -1,8 +1,9 @@
 junkey
 ======
 
-Currently works with the latest [Julia](http://julialang.org/) [v0.2.0](https://github.com/JuliaLang/julia/tree/v0.1.2), 
-requires latest
+Currently works with the latest master [Julia](http://julialang.org/) [v0.2.0](https://github.com/JuliaLang/julia).
+
+Requires the latest
 [DataFrames](https://github.com/HarlanH/DataFrames.jl),
 [Distributions](https://github.com/JuliaStats/Distributions.jl),
 and [Distributions](https://github.com/johnmyleswhite/Clustering.jl)
