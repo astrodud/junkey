@@ -2,19 +2,19 @@
 ## TODO: use BioSeq pkg (can use sub- and file-based arrays, and DNA2seq which is 2 bits per NT!) -- see bottom for sample code 
 ##    NOTE that DNA2seq can't handle IUPAC symbols but file-based can! (and is just as fast!)
 
-get_sequences( genes::Vector{ASCIIString}, op_shift::Bool, distance::Vector{Int64} ) =
-                           get_sequences( genes, op_shift, distance, false )
+#get_sequences( genes::Vector{ASCIIString}, op_shift::Bool, distance::Vector{Int64} ) =
+#                           get_sequences( genes, op_shift, distance, false )
 
 get_sequences( genes::Vector{ASCIIString} ) = get_sequences( genes, true, distance_search )
 
 ## This version of the function only works after anno/genome_seq/op_table have been set to a global var.
-function get_sequences( genes::Vector{ASCIIString}, op_shift::Bool, distance::Vector{Int64}, debug::Bool )
+function get_sequences( genes::Vector{ASCIIString}, op_shift::Bool, distance::Vector{Int64}, debug::Bool=false )
     global anno, genome_seqs, op_table;
     get_sequences( genes, anno, genome_seqs, op_shift, op_table, distance, debug )
 end
 
 function get_sequences( genes::Vector{ASCIIString}, anno::DataFrame, genome_seqs::DataFrame, 
-                       op_shift::Bool, op_table::DataFrame, distance::Vector{Int64}, debug::Bool )
+                       op_shift::Bool, op_table::DataFrame, distance::Vector{Int64}, debug::Bool=false )
     ##genes = genes[ findin( genes, rownames(anno) ) ]
     seqs::Vector{DataFrame} = Array(DataFrame, length(genes)) ##Matrix{ASCIIString} = Array(ASCIIString,length(genes),3)
     ind = 0
@@ -130,10 +130,10 @@ const iupac_dict = read_iupac();
 ## Only does it for a SINGLE "order" value and single strand - see the default getBgCounts() to see standard usage.
 ## Use in conjunction with generate_all_kmers in order to get seqs w/ count=0
 ## Taken from my seqTest.jl
-function getBgCounts( seqs::Array{ASCIIString,1}, order::Array{Int64,1}, verbose::Bool ) 
+function getBgCounts( seqs::Array{ASCIIString,1}, order::Array{Int64,1}=[0:5], verbose::Bool=false ) 
     ss::ASCIIString = "";
     d = Dict{ASCIIString,Int64}() ## Specifying the types speeds it up about 35%
-    for seq=seqs
+    for seq=[seqs,[revComp(s) for s=seqs]] ##seqs
         seq = uppercase( seq )
         for j=order
             if verbose println(j); end
@@ -148,11 +148,11 @@ end
 
 ##getBgCounts( seqs::Array{ASCIIString,1}, order::Int64 ) = 
 ##             getBgCounts( [seqs,[revComp(s) for s=seqs]], [order] );
-getBgCounts( seqs::Array{ASCIIString,1}, order::Array{Int64,1} ) = 
-               getBgCounts( [seqs,[revComp(s) for s=seqs]], order, false );
-getBgCounts( seqs::Array{ASCIIString,1} ) = 
-               getBgCounts( [seqs,[revComp(s) for s=seqs]], [0:5] );
-getBgCounts( seq::ASCIIString ) = getBgCounts( [seq] );
+# getBgCounts( seqs::Array{ASCIIString,1}, order::Array{Int64,1} ) = 
+#                getBgCounts( [seqs,[revComp(s) for s=seqs]], order ); ##, false );
+# getBgCounts( seqs::Array{ASCIIString,1} ) = 
+#                getBgCounts( [seqs,[revComp(s) for s=seqs]] );
+# getBgCounts( seq::ASCIIString ) = getBgCounts( [seq] );
 
 #bgCounts = getBgCounts( genome_seqs );
 #end # profile
@@ -172,7 +172,7 @@ end
 
 ## Couldn't do this in R! Generate all sequences with given length.
 ## Allow for up to n_ns N's as well.
-function generate_all_kmers( len::Int64, n_ns::Int64, letters::Array{Char,1} )
+function generate_all_kmers( len::Int64, n_ns::Int64=0, letters::Array{Char,1}=DNA_letters )
     function append_nucs( d::Array{ASCIIString}, letters::Array{Char,1} )
         out = Array(ASCIIString, length(d)*length(letters))
         ind::Int64 = 0
@@ -192,8 +192,8 @@ function generate_all_kmers( len::Int64, n_ns::Int64, letters::Array{Char,1} )
     d
 end
 
-generate_all_kmers( len::Int64 ) = generate_all_kmers( len, 0, DNA_letters )
-generate_all_kmers( len::Int64, n_ns::Int64 ) = generate_all_kmers( len, n_ns, DNA_letters )
+#generate_all_kmers( len::Int64 ) = generate_all_kmers( len, 0, DNA_letters )
+#generate_all_kmers( len::Int64, n_ns::Int64 ) = generate_all_kmers( len, n_ns, DNA_letters )
 
 if false
     seq = "GATCATGCATGTATGCTACGTGCGCGGGTACGTATATGATGCTATTATCGTAGCTACGTAGCTAGCTAGCTACAGTCGATCGATTGAC"

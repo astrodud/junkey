@@ -65,8 +65,6 @@ end
 
 bicluster_volume( b::bicluster ) = float32( length(b.rows) * length(b.cols) )
 
-fill_cluster_scores(clust::bicluster) = fill_cluster_scores(clust, false)
-
 function re_seed_bicluster_if_necessary(clust::bicluster)
     const min_rows = 3; const max_rows = 80
     if length(clust.rows) < min_rows ||  ## Need to fill in "empty" clusters, mostly because var is non-defined, Also because meme-ing only works with >2 sequences
@@ -95,31 +93,58 @@ function re_seed_all_clusters_if_necessary(clusters::Dict{Int64,bicluster})
     clusters
 end
 
-function fill_cluster_scores(clust::bicluster, force::Bool)
+#fill_cluster_scores(clust::bicluster) = fill_cluster_scores(clust, false)
+
+function fill_cluster_scores(clust::bicluster, force::Bool=false)
     global iter
-    fill_cluster_scores(clust, iter, force)
+    fill_cluster_scores(clust, iter, force, false)
 end
 
-function fill_cluster_scores(clust::bicluster, iter::Int64, force::Bool)
+function fill_cluster_scores(clust::bicluster, iter::Int64, force::Bool=false, verbose::Bool=false)
     global ratios, string_net
     ##clust = re_seed_bicluster_if_necessary(clust)
+    if verbose println(clust.k, " ", length(clust.rows), " ", length(clust.cols)); end
     (weight_r, weight_n, weight_m, weight_c, weight_v) = get_score_weights(iter)
+    #println("HERE5 $weight_r $(clust.changed)")
     if force || ( ( weight_r + weight_c > 0 ) && ( sum(clust.changed) > 0 ) )  
-        clust = get_cluster_expr_rowcol_scores( clust, ratios ) ## Actually need to do it for rows too, even if only cols changed
+        try
+            clust = get_cluster_expr_rowcol_scores( clust, ratios ) ## Actually need to do it for rows too, even if only cols changed
+        catch x
+            warn( "ERROR WITH ROWCOL SCORES!" )
+            println( x )
+        end
     end
+    #println("HERE6")
     if force || clust.changed[1] ## rows only
-        if abs(weight_n) > 0 clust = get_cluster_network_row_scores( clust, string_net ); end
-        if weight_m > 0 clust = get_cluster_meme_row_scores( clust ); end 
+        if abs(weight_n) > 0 
+            try
+                clust = get_cluster_network_row_scores( clust, string_net )
+            catch x
+                warn( "ERROR WITH NETWORK SCORES!" )
+                println( x )
+            end
+        end
+        #println("HERE6a")
+        if weight_m > 0 
+            try
+                clust = get_cluster_meme_row_scores( clust )
+            catch x
+                warn( "ERROR WITH MEME SCORES!" )
+                println( x )
+            end
+        end
     end 
+    #println("HERE7")
     clust.changed[1] = clust.changed[2] = false
+    #println("HERE8")
     clust
 end
 
-fill_all_cluster_scores(clusters::Dict{Int64,bicluster}) = fill_all_cluster_scores(clusters, false, false)
+#fill_all_cluster_scores(clusters::Dict{Int64,bicluster}) = fill_all_cluster_scores(clusters, false, false)
 
 ## DONE: if anything needs to be parallelized, it's this function. (At least the meme-ing.) -- see re_meme_all_biclusters_parallel
 ## DONE: Also use the bicluster.changed field consistently and don't re-calc for biclusters that haven't changed.
-function fill_all_cluster_scores(clusters::Dict{Int64,bicluster}, force::Bool, verbose::Bool)
+function fill_all_cluster_scores(clusters::Dict{Int64,bicluster}, force::Bool=false, verbose::Bool=false)
     global k_clust
     clusters = re_seed_all_clusters_if_necessary(clusters)    
     ## Get all the scores for adding/removing rows/cols from each bicluster
@@ -133,21 +158,50 @@ function fill_all_cluster_scores(clusters::Dict{Int64,bicluster}, force::Bool, v
     clusters
 end
 
-function pre_load_cluster_nodes() 
+function pre_load_child_nodes() 
     global organism, k_clust, ratios, string_net, all_genes, n_iters
     ## Need to pre-send all data to children -- I dont know how to send a variable in the @everywhere call so use a fixed filename
     ## This only needs to be done once, doing it multiple times causes a big memory leak on the children.
+    println( "Sending data to child nodes" )
     fname = "tmp_send_data.jldz"
-    save_jld( fname, (organism, k_clust, ratios, string_net, all_genes, n_iters) ) 
+    save_jld( fname, (organism, k_clust, ratios, string_net, all_genes, n_iters, motif_width_range, distance_search, distance_scan) ) 
                       #genome_seq, anno, op_table, allSeqs_fname, all_bgFreqs, all_genes, all_rows, iter, clusters) )
-    @everywhere (organism, k_clust, ratios, string_net, all_genes, n_iters) = load_jld("tmp_send_data.jldz")
+    @everywhere (organism, k_clust, ratios, string_net, all_genes, n_iters, motif_width_range, distance_search, distance_scan) = load_jld("tmp_send_data.jldz")
     sleep( 5 ) ## make sure children have time to load the data before the file is removed ???
     rm( fname )
 end
 
-fill_all_cluster_scores_parallel(clusters::Dict{Int64,bicluster}) = fill_all_cluster_scores_parallel(clusters, false, false)
+# function my_pmap(f, lsts...)
+#     np = nprocs()
+#     n = length(lsts[1])
+#     results = cell(n)
+#     i = 1
+#     # function to produce the next work item from the queue. 
+#     # in this case it's just an index. 
+#     next_idx() = (idx=i; i+=1; idx)
+#     @sync begin
+#         for p=1:np
+#             if p != myid() || np == 1
+#                 @spawnat myid() begin
+#                     while true
+#                         idx = next_idx()
+#                         if idx > n
+#                             break
+#                         end
+#                         #println("HEREXXX: $idx")
+#                         results[idx] = remotecall_fetch(p, f,
+#                                                         map(L->L[idx], lsts)...)
+#                     end
+#                 end
+#             end
+#         end
+#     end
+#     results
+# end
 
-function fill_all_cluster_scores_parallel(clusters::Dict{Int64,bicluster}, force::Bool, verbose::Bool)
+#fill_all_cluster_scores_parallel(clusters::Dict{Int64,bicluster}) = fill_all_cluster_scores_parallel(clusters, false, false)
+
+function fill_all_cluster_scores_parallel(clusters::Dict{Int64,bicluster}, force::Bool=false, verbose::Bool=false)
     global k_clust, iter
     clusters = re_seed_all_clusters_if_necessary(clusters) ## do this first since it relies on a global "clusters"
     data::Array{Any,1} = []
@@ -157,7 +211,7 @@ function fill_all_cluster_scores_parallel(clusters::Dict{Int64,bicluster}, force
         b.mast_out = clusters[k].mast_out
         if ! force b.changed = clusters[k].changed
         else b.changed[1] = b.changed[2] = true; end
-        dat = { "iter" => iter, "k" => b.k, "biclust" => b }
+        dat = { "iter" => iter, "k" => b.k, "biclust" => b, "verbose" => verbose, "force" => force }
         push!( data, dat )
     end
     new_clusts = pmap( fill_cluster_scores, data ) ## returns an Array{Any,1}
@@ -187,7 +241,10 @@ function fill_cluster_scores(x::Dict{Any,Any})
     k = x["k"]
     iter = x["iter"]
     b = x["biclust"]
-    fill_cluster_scores(b, iter, false)   ### note changed force to false; this may be buggy
+    force = x["force"]
+    verbose = x["verbose"]
+    out = fill_cluster_scores(b, iter, force, verbose)   ### note changed force to false; this may be buggy
+    out
 end
 
 ## number of clusters each gene is in - need to compute only once over all clusters
@@ -229,10 +286,10 @@ function bicluster_meme_pval( b::bicluster )
     mn
 end
 
-clusters_w_func( func, clusters ) = clusters_w_func( func, clusters, 1 )
+#clusters_w_func( func, clusters ) = clusters_w_func( func, clusters, 1 )
 
 ## Find the flagellar cluster, whew!!!
-function clusters_w_func( func::ASCIIString, clusters, n_best )
+function clusters_w_func( func::ASCIIString, clusters, n_best=1 )
     global anno, ratios
     inds = findn([ismatch(Regex(func),anno["desc"][i]) for i=1:size(anno,1)])
     r_rownames = rownames(ratios)

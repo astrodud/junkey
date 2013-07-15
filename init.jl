@@ -63,11 +63,12 @@ function load_annos(organism)
     ## Load the gene annotations
     org_files = system(`ls junkey/$organism/`)
     genomeInfo_file = org_files[ findfirst( [ begins_with(i,"genomeInfo.") for i=org_files ] ) ]
-    io = open("./junkey/$organism/$genomeInfo_file", "r")
-    df = DataFrames.read_table( io, '\t', DataFrames.DEFAULT_QUOTATION_CHARACTER, DataFrames.DEFAULT_MISSINGNESS_INDICATORS, true,
-                           DataFrames.determine_column_names(io, '\t', DataFrames.DEFAULT_QUOTATION_CHARACTER, true ),
-                           DataFrames.determine_nrows( "./junkey/$organism/$genomeInfo_file", true ) ) ## pain in the ass but it works
-    close( io )
+    df = DataFrames.readtable( "./junkey/$organism/$genomeInfo_file", separator='\t' )
+    #io = open("./junkey/$organism/$genomeInfo_file", "r")
+    #df = DataFrames.read_table( io, '\t', DataFrames.DEFAULT_QUOTATION_CHARACTER, DataFrames.DEFAULT_MISSINGNESS_INDICATORS, true,
+    #                       DataFrames.determine_column_names(io, '\t', DataFrames.DEFAULT_QUOTATION_CHARACTER, true ),
+    #                       DataFrames.determine_nrows( "./junkey/$organism/$genomeInfo_file", true ) ) ## pain in the ass but it works
+    #close( io )
     for i=find([typeof(df[i]) for i=1:size(df,2)].==DataArray{UTF8String,1})
         df[i] = DataArray( convert( Vector{ASCIIString}, df[ i ].data ) )
     end
@@ -95,13 +96,14 @@ function load_string_net(organism)
     org_files = system(`ls junkey/$organism/`)
     string_file = org_files[ findfirst( [ begins_with(i,"STRING") for i=org_files ] ) ]
     ##df = readdlm("./junkey/$organism/$string_file", '\t')
-    io = open("./junkey/$organism/$string_file", "r")
-    has_header = false
-    df = DataFrames.read_table( io, '\t', DataFrames.DEFAULT_QUOTATION_CHARACTER, DataFrames.DEFAULT_MISSINGNESS_INDICATORS, 
-                               has_header,
-                           DataFrames.determine_column_names(io, '\t', DataFrames.DEFAULT_QUOTATION_CHARACTER, has_header ),
-                           DataFrames.determine_nrows( "./junkey/$organism/$string_file", has_header ) ) ## pain in the ass but it works
-    close( io )
+    df = DataFrames.readtable( "./junkey/$organism/$string_file", separator='\t', header=false )
+    #io = open("./junkey/$organism/$string_file", "r")
+    #has_header = false
+    #df = DataFrames.read_table( io, '\t', DataFrames.DEFAULT_QUOTATION_CHARACTER, DataFrames.DEFAULT_MISSINGNESS_INDICATORS, 
+    #                           has_header,
+    #                       DataFrames.determine_column_names(io, '\t', DataFrames.DEFAULT_QUOTATION_CHARACTER, has_header ),
+    #                       DataFrames.determine_nrows( "./junkey/$organism/$string_file", has_header ) ) ## pain in the ass but it works
+    #close( io )
     # df[1] = [ split( df[ i, 1 ], '.' )[ 2 ] for i=1:size( df, 1 ) ]
     # df[2] = [ split( df[ i, 2 ], '.' )[ 2 ] for i=1:size( df, 1 ) ]
     # if size(df,2) > 3 
@@ -141,12 +143,13 @@ function load_op_table(organism)
     op_table::DataFrame = DataFrame()
     if op_file > 0 ##filesize("./junkey/$organism/$op_file") > 0   ## eukaryotes - no op_file exists!
         op_file = org_files[ op_file ]
-        io = open("./junkey/$organism/$op_file", "r")
-        has_header = true
-        df = DataFrames.read_table( io, '\t', DataFrames.DEFAULT_QUOTATION_CHARACTER, DataFrames.DEFAULT_MISSINGNESS_INDICATORS, has_header,
-                                   DataFrames.determine_column_names(io, '\t', DataFrames.DEFAULT_QUOTATION_CHARACTER, has_header ),
-                                   DataFrames.determine_nrows( "./junkey/$organism/$op_file", has_header ) ) ## pain in the ass but it works
-        close( io )
+        df = DataFrames.readtable( "./junkey/$organism/$op_file", separator='\t' )
+        #io = open("./junkey/$organism/$op_file", "r")
+        #has_header = true
+        #df = DataFrames.read_table( io, '\t', DataFrames.DEFAULT_QUOTATION_CHARACTER, DataFrames.DEFAULT_MISSINGNESS_INDICATORS, has_header,
+        #                           DataFrames.determine_column_names(io, '\t', DataFrames.DEFAULT_QUOTATION_CHARACTER, has_header ),
+        #                           DataFrames.determine_nrows( "./junkey/$organism/$op_file", has_header ) ) ## pain in the ass but it works
+        #close( io )
         df = df[ [ "SysName1", "SysName2", "bOp", "pOp" ] ] ##3, 4, 7, 8 ] ];
         df[ "SysName1" ] = DataArray( convert( Vector{ASCIIString}, df[ "SysName1" ].data ) )
         df[ "SysName2" ] = DataArray( convert( Vector{ASCIIString}, df[ "SysName2" ].data ) )
@@ -255,10 +258,10 @@ function init_biclusters( x, k_clust )
     xx[is_nan] = rand(sum(is_nan))*0.1 - 0.05; ## randomize a bit; note this works on the original (global) x!
 
     ##km1=kmeansclust( xx, 50, 20 ); ## original
-    km1=kmeans( xx', k_clust, 20 ); ## my "optimized" version that pre-removes NAs
-    assignments = km1[3]
-    ##km1=Clustering.k_means(convert(Matrix{Float64},xx), k_clust)
-    ##assignments = km1.assignments
+    ##km1=kmeans( xx', k_clust, 20 ); ## my "optimized" version that pre-removes NAs
+    ##assignments = km1[3]
+    km1=Clustering.kmeans(convert(Matrix{Float64},xx), k_clust)
+    assignments = km1.assignments
     
 #     if nprocs() > 1 km2=kmeans2( x.x', k_clust, 20 ); ## parallelized version -- now seems to be broken
 #     else km1=kmeans( x.x', k_clust, 20 ); ## my "optimized" version that pre-removes NAs
@@ -271,9 +274,9 @@ function init_biclusters( x, k_clust )
     clusters
 end
 
-get_regex( strings::Vector{ASCIIString} ) = get_regex( strings, 2 )
+#get_regex( strings::Vector{ASCIIString} ) = get_regex( strings, 2 )
 
-function get_regex( strings::Vector{ASCIIString}, min_ignore::Int64 )
+function get_regex( strings::Vector{ASCIIString}, min_ignore::Int=2 )
     nchar=int32([length(strings[i]) for i=1:length(strings)])
     out::ASCIIString = ""
     for i=1:max(nchar)

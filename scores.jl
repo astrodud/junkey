@@ -11,7 +11,7 @@ function get_score_weights(iter)
     global n_iters, ratios
     weight_r =  1.0
     weight_n = -0.1 * float32(iter-1) / n_iters   ## increase linearly from 0 at iter=1 to 0.9
-    weight_m =  0.3 * float32(iter-1) / n_iters * ((iter<=5) ? 0 : 1) ## ramp up from 0 to 1.8 starting at iter=6
+    weight_m =  0.8 * float32(iter-1) / n_iters * ((iter<=5) ? 0 : 1) ## ramp up from 0 to 1.8 starting at iter=6
     weight_c =  1.0 * size(ratios.x,1)/size(ratios.x,2)/12.0 ## ??? ## 1.2 works good for hpy
     weight_v =  0.1 + 0.3 * float32(iter-1) / n_iters  ## ramp up from 0.3 to 0.8
     weight_g =  0.1 + 0.1 * float32(iter-1) / n_iters  ## ramp up from 0.3 to 0.8
@@ -71,7 +71,7 @@ end
 
 ## Scores for number of clusters each gene is in
 function get_cluster_row_count_scores( counts_g::Vector{Int32} )
-    const thresh = 3.0 ## ## lower is better; coerce removing if gene is in more than 2 clusters
+    const thresh = 1.3 ## 2.0 ## 3.0 ## lower is better; coerce removing if gene is in more than 2 clusters
     float32(counts_g - thresh)
 end
 
@@ -92,7 +92,6 @@ end
 
 function get_cluster_expr_rowcol_scores{T}( b::bicluster, x::NamedMatrix{T} ) ##, verbose )
     const var_add = 0.1
-    #println("IN HERE: ROW SCORES $(b.k)")
     ## Try getting the effect of adding/removing each row/col from this cluster on its total variance
     ## DONE: want to have biclusters with larger row-variance, so normalize var(x)/var(mn)
     ## Other variables to be tweaked: currently using out_var(x)=var(x)/(var(colmeans(x))+1) --
@@ -123,7 +122,6 @@ function get_cluster_expr_rowcol_scores{T}( b::bicluster, x::NamedMatrix{T} ) ##
        score_r[r] = ( newvr - vr ) #/ (vr+0.01) ##+ ( isIn ? v_factor : -v_factor )
     end
 
-    #println("IN HERE: COL")
     ##xx=x.x[rows,:]
     xx=view(x.x,rows,[1:size(x.x,2)])
     mn=colmeans(xx)
@@ -139,8 +137,6 @@ function get_cluster_expr_rowcol_scores{T}( b::bicluster, x::NamedMatrix{T} ) ##
        score_c[c] = ( newvr - vr ) #/ (vr+0.01) ##+ ( isIn ? v_factor : -v_factor )
     end
 
-    ##if verbose println( b.k, " ", resid, " ", vr ); end
-
     b.var = vr
     b.resid = resid
     b.scores_r = score_r ## Not needed since the vector is filled (passed by reference)
@@ -153,23 +149,21 @@ end
 ## NOTE we return log10(density) changes, which is OPPOSITE of ROW/MOTIF scores because increases are better
 function get_cluster_network_row_scores( b::bicluster, network::DataFrame ) 
     global ratios, all_genes
-    #println("IN HERE: NET SCORES $(b.k)")
     ## Note that right now rows in the bicluster is the index into the rownames of the expression matrix!!! TODO: change this!
     r_rownames = rownames(ratios)
-    rows::Vector{ASCIIString} = r_rownames[b.rows] ##keys( all_genes )[ in( values( all_genes ), b.rows ) ]
+    rows = r_rownames[b.rows] ##keys( all_genes )[ in( values( all_genes ), b.rows ) ]
     net = sub( network, findin( network["x1"], rows ) ) ## Assume network is symmetric!
     grps = groupby( net, "x2" ) ## each group is a subnetwork with all genes in bicluster (x1) connected to a given gene
     grpnames = convert( Vector{ASCIIString}, [ grps[i]["x2"][1] for i=1:length( grps ) ] ) ## the given gene for each group
-    grpname_lookup::Dict{ASCIIString,Int64} = [ grpnames[i] => i for i=1:length(grps) ]
+    grpname_lookup = [ grpnames[i] => i for i=1:length(grps) ]
     new_net = net2 = sub( net, findin( net["x2"], rows ) )   ## subnetwork just connecting between nodes in the bicluster
     sum_weights = sum( new_net["x3"] )
     dens = log10( sum_weights / length(rows)^2 + 1e-9 ) ## Already symmetrized, need to decrease count by 1/2
-    #n1::PooledDataArray{ASCIIString,1} = net[2] ##Vector{ASCIIString} = net[2]
-    n2::PooledDataArray{ASCIIString,1} = net2["x2"] ##Vector{ASCIIString} = net2[2]
+    n2 = net2["x2"] ##Vector{ASCIIString} = net2[2]
 
     score_n = b.scores_n
     if length(score_n) == 0 score_n = Array(Float32,size(ratios.x,1)); end    
-    new_dens::Float32 = 0.
+    new_dens = 0.
     for r in r_rownames
         isIn = contains(rows, r) 
         if isIn ## r is in the bicluster -- remove the node from the bicluster-only subnetwork and recalc the density
@@ -200,6 +194,7 @@ function get_cluster_meme_row_scores( b::bicluster )
     if length(score_m) == 0 score_m = Array(Float32,size(ratios.x,1)); end
     r_rownames = rownames(ratios)
     genes = r_rownames[b.rows]
+    #sz=size(b.mast_out);#println("HERE MOT1 $sz")
     ## TODO: don't only use values for genes that are in the ratios matrix.
     ## DONE: make mast_out into a DataFrame for easier searching, subsetting
     if size(b.mast_out,1) <= 0
@@ -208,6 +203,7 @@ function get_cluster_meme_row_scores( b::bicluster )
         return( b )
     end
     df = sub( b.mast_out, findin( b.mast_out["Gene"], genes ) )
+    #sz=size(df);#println("HERE MOT2 $sz")
     mn::Float32 = nanmean( log10( df["P-value"].data ) )
     pvals::Dict{ASCIIString,Float32} = Dict{ASCIIString,Float32}()
     for i in 1:size(b.mast_out,1) pvals[b.mast_out["Gene"].data[i]] = b.mast_out["P-value"].data[i]; end

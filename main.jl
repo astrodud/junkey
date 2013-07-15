@@ -1,10 +1,13 @@
+## TODO: use pfork from PTools package
+## TODO: use named function arguments instead of all the multiply-defined funcs here
+
 require( "./junkey/requires.jl" ) ## This code will be loaded onto all nodes
 
 ## MAIN PROGRAM
 
 if ! isdefined(:organism)
-    organism = "Hpy"; k_clust = 75
-    #organism = "Eco"; k_clust = 450 
+    #organism = "Hpy"; k_clust = 75
+    organism = "Eco"; k_clust = 450 
     #organism = "Sce"; k_clust = 500
     #organism = "Mpn"; k_clust = 75
 end
@@ -17,16 +20,16 @@ if ! isdefined(:n_iters) n_iters = 100; end
 if ! isdefined(:distance_search) distance_search = [-150,+20]; end 
 if ! isdefined(:distance_scan)   distance_scan =   [-250,+50]; end
 if ! isdefined(:motif_width_range) motif_width_range = [6,24]; end
-initialize_constants( organism ) ## update the three constants (above) for organism specific (e.g. yeast)
+initialize_constants( organism ) ## update the three constants (above) for organism specific (e.g. yeast), also does so on cluster nodes
 
-if ! isinteractive() stop(); end ## This stuff below should ONLY run on the head node
+if isinteractive() ## This stuff below should ONLY run on the head node
 
 (ratios, genome_seqs, anno, op_table, string_net, allSeqs_fname, all_bgFreqs, all_genes) = junkey_init(organism, k_clust);
 
 ## DONE: set "default" k_clust if not already set:
 if ! isdefined(:k_clust) k_clust = round( size( ratios, 1 ) / 10 ); end
 
-if nprocs() > 1 pre_load_cluster_nodes(); end ## send ratios, string_net, k_clust, etc. over to children
+if nprocs() > 1 pre_load_child_nodes(); end ## send ratios, string_net, k_clust, etc. over to children
 gc()
 
 startTime = time()
@@ -72,3 +75,6 @@ println( @sprintf( "%.3f", (endTime - startTime)/60 ), " minutes since initializ
 #seqs = get_sequences(genes);
 #@time gibbs_out = gibbs_site_sampler(seqs[:,2])     ## run gibbs sampler on most "flagellar-enriched" cluster
 #@time gibbs_out2 = gibbs_site_sampler(seqs, gibbs_out["pssm"])
+
+
+end; ## isinteractive()

@@ -2,12 +2,12 @@
 using Distributions
 #import Distributions.sample
 using DataFrames
-#using Clustering  ## will use this after upgrade to 0.2.0
+using Clustering  ## will use this after upgrade to 0.2.0
 using GZip
 
 try
-    reload( "./junkey/NamedMatrix.jl" ) ## catch it so the rest of this file can be reload()-ed without an error
-    reload( "./junkey/Bicluster.jl" )
+    require( "./junkey/NamedMatrix.jl" ) ## catch it so the rest of this file can be require()-ed without an error
+    require( "./junkey/Bicluster.jl" )
     require( "./junkey/ArrayView.jl" )
 catch x
     println( "Not re-loading types" )
@@ -15,7 +15,7 @@ catch x
 end
 
 require( "./junkey/util.jl" )
-require( "./junkey/kmeans.jl" )
+#require( "./junkey/kmeans.jl" )
 require( "./junkey/funcs.jl" )
 require( "./junkey/scores.jl" )
 require( "./junkey/init.jl" )

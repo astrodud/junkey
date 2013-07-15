@@ -18,14 +18,14 @@ function l2dist{T}( a::Vector{T}, b::Vector{T} ) ##= sum( abs2( a - b ) );
 end
 
 function kmeans_getClass{T}( k::Int64, Xexp::Array{T,1}, centers::Array{T,2}, 
-                         distfun::Function )
+                         distfun::Function=l1dist )
     dists::Array{T,1} = Array(T,k);
     for j=1:k dists[j] = distfun(centers[:,j],Xexp); end
     findmin(dists)[2];
 end
 
 function kmeans_getClass2{T}( k::Int64, Xexp::Array{T,1}, centers::Array{T,2}, 
-                          distfun::Function ) 
+                          distfun::Function=l1dist ) 
     ## a little faster to put the distfun and findmin into a single loop?
     m::T = typemax(T) ## Plus we get min(dists) out as a bonus.
     mi::Int32 = 0
@@ -40,7 +40,7 @@ function kmeans_getClass2{T}( k::Int64, Xexp::Array{T,1}, centers::Array{T,2},
 end
 
 ## Todo: multiple restarts (parallelized) and return the one with the best mean minDists
-function kmeans{T}(X::Array{T,2}, k::Int, maxIterations::Int, distfun::Function)
+function kmeans{T}(X::Array{T,2}, k::Int, maxIterations::Int=20, distfun::Function=l1dist)
     const nan_ = 0.0 / 0.0;
     classes::Array{Int,1} = Array(Int,size(X,2)); ##fill!(classes,Inf);
     centers::Array{T,2} = rand(size(X,1),k);
@@ -66,46 +66,46 @@ function kmeans{T}(X::Array{T,2}, k::Int, maxIterations::Int, distfun::Function)
     (centers, minDists, classes)
 end
 
-kmeans{T}(X::Array{T,2}, k::Int, maxIterations::Int) = kmeans(X, k, maxIterations, l1dist);
+#kmeans{T}(X::Array{T,2}, k::Int, maxIterations::Int) = kmeans(X, k, maxIterations, l1dist);
 
-function kmeans{T}(X::Array{T,2}, k::Int, maxIterations::Int, nRestarts::Int, 
-                distfun::Function) ## should use pmap() !!!
+function kmeans{T}(X::Array{T,2}, k::Int, maxIterations::Int=20, nRestarts::Int=20, 
+                distfun::Function=l1dist) ## should use pmap() !!!
     out = @parallel ( collect_dict ) for i=1:nRestarts 
         kmeans( X, k, maxIterations, distfun )
     end
     out
 end
 
-kmeans{T}(X::Array{T,2}, k::Int, maxIterations::Int, nRestarts::Int) =
-    kmeans(X, k, maxIterations, nRestarts, l1dist);
+#kmeans{T}(X::Array{T,2}, k::Int, maxIterations::Int, nRestarts::Int) =
+#    kmeans(X, k, maxIterations, nRestarts, l1dist);
 
-function kmeansclust (X, k, maxIterations) 
-    nan_ = 0.0 / 0.0;
-    n = size(X,2);
-    classes = zeros(Int32,1,n);
-    centers = rand(size(X,1),k);
-    oldCenters = copy(centers);
-    while (maxIterations > 0)
-        println("iterations left: $maxIterations");
-        maxIterations = maxIterations - 1;
-        for i = 1:n
-            Xexp = repmat(X[:,i],1,k);
-            dists = sum(abs(centers - Xexp),1);
-            classes[i] = find(min(dists) .== dists)[1];
-        end
-        for i = 1:k
-            inClass = X[:,find(classes .== i)];
-            if (isempty(inClass))
-                centers[:,i] = nan_;
-            else
-                centers[:,i] = mean(inClass,2);
-            end
-        end
-        if (all(oldCenters .== centers))
-            break;
-        end
-        oldCenters = copy(centers);
-    end
-    (centers, classes)
-end
+# function kmeansclust (X, k, maxIterations=20) 
+#     nan_ = 0.0 / 0.0;
+#     n = size(X,2);
+#     classes = zeros(Int32,1,n);
+#     centers = rand(size(X,1),k);
+#     oldCenters = copy(centers);
+#     while (maxIterations > 0)
+#         println("iterations left: $maxIterations");
+#         maxIterations = maxIterations - 1;
+#         for i = 1:n
+#             Xexp = repmat(X[:,i],1,k);
+#             dists = sum(abs(centers - Xexp),1);
+#             classes[i] = find(min(dists) .== dists)[1];
+#         end
+#         for i = 1:k
+#             inClass = X[:,find(classes .== i)];
+#             if (isempty(inClass))
+#                 centers[:,i] = nan_;
+#             else
+#                 centers[:,i] = mean(inClass,2);
+#             end
+#         end
+#         if (all(oldCenters .== centers))
+#             break;
+#         end
+#         oldCenters = copy(centers);
+#     end
+#     (centers, classes)
+# end
 
