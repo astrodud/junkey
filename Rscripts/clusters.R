@@ -1,12 +1,18 @@
 #data('hpy',package='cMonkey.data')
-#require(cMonkey)
-source('~/scratch/biclust/cmonkey.R', chdir=T)
+require(cMonkey)
+#source('~/scratch/biclust/cmonkey.R', chdir=T)
 debug.on()
+
+require(multicore)
+options(cores=4)
+
+organism <- 'eco'
+organism.dir <- paste(toupper(substr(organism,1,1)),substr(organism,2,3),sep='')
 
 x=read.delim("clusters.tsv")
 for (i in c('resid','dens_string','meanp_meme')) x[[i]] = as.numeric(gsub('f0','',as.character(x[[i]])))
-#e=cmonkey.init(organism='hpy', bg.order=0, k.clust=nrow(x), ratios='~/scratch/julia/junkey/Hpy/ratios.tsv', n.motifs=2, discard.genome=F)
-e=cmonkey.init(organism='eco', bg.order=0, k.clust=nrow(x), ratios='~/scratch/julia/junkey/Eco/ratios.tsv', n.motifs=2, discard.genome=F)
+e=cmonkey.init(organism=organism, bg.order=0, k.clust=nrow(x), ratios=sprintf('~/scratch/julia/junkey/%s/ratios.tsv', organism.dir),
+  n.motifs=2, discard.genome=F, parallel.cores=options('cores'), parallel.cores.motif=options('cores'))
 e$cmonkey.re.seed( e )
 sys.source("~/scratch/biclust/cmonkey-funcs.R",envir=e,chdir=T)
 e$row.score.func='default'
@@ -34,23 +40,25 @@ tmp = mclapply(1:nrow(x), function(i){
   meme.out = strsplit(as.character(x$meme_out[i]),"<<<<>>>>")[[1]]
   if ( length( meme.out ) > 0 ) clust$meme.out = e$getMemeMotifInfo( meme.out )
   else clust$meme.out = NULL
+  ##print(clust$meme.out)
 
   mast.out <- list();
   pv.ev = list()
   if ( ! is.null( clust$meme.out ) ) {
     mast.out <- try( e$runMast( meme.out, e$mast.cmd[ seq.type ], names( all.seqs ), all.seqs,
-                               verbose=FALSE, seq.type=seq.type, bg.list=bg.list, bgfname=bg.fname ) ) 
-    pv.ev <- e$get.pv.ev.single( mast.out, rows )
+                               verbose=TRUE, seq.type=seq.type, bg.list=bg.list, bgfname=bg.fname ) ) 
+    if ( class(mast.out) != 'try-error' ) pv.ev <- e$get.pv.ev.single( mast.out, rows )
   }
-  list(clust=clust, mast.out=mast.out, pv.ev=pv.ev)
+  list(clust=clust, pv.ev=pv.ev) ## mast.out=mast.out, ## mast.out is too big!
 } )
+rm(x,all.seqs,clust,bg.list,tmp2,bg.fname); gc()
 
-for (i in 1:length(tmp)) {
+for ( i in 1:length(tmp) ) {
   clust=tmp[[i]]$clust
-  mast.out=tmp[[i]]$mast.out
-  pv.ev=tmp[[i]]$pv.ev
+  ##mast.out=tmp[[i]]$mast.out
+  ##pv.ev=tmp[[i]]$pv.ev
   
-  e$meme.scores[[seq.type]][[i]] = list( k=i, last.run=FALSE, meme.out=clust$meme.out, pv.ev=pv.ev, prev.run=NULL )
+  e$meme.scores[[seq.type]][[i]] = list( k=i, last.run=FALSE, meme.out=clust$meme.out, pv.ev=tmp[[i]]$pv.ev, prev.run=NULL )
 
   e$clusterStack[[i]] = clust
   if ( length(clust$meme.out) > 0 ) {
@@ -65,3 +73,4 @@ rm(tmp); gc()
 
 e$meme.scores[[seq.type]]$all.pv <- e$make.pv.ev.matrix( e$meme.scores[[seq.type]] )
 
+save( e, file=sprintf('%s_out.RData', organism.dir) )
