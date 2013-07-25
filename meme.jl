@@ -17,15 +17,20 @@ function get_n_motifs( iter, n_iters )
 end
 
 ## DONE: only send (and receive) the meme_out and mast_out data (not entire bicluster!) -- a bit faster..?
-function re_meme_all_biclusters_parallel( clusters::Dict{Int64,bicluster}, force::Bool )
+#re_meme_all_biclusters_parallel( clusters::Dict{Int64,bicluster}, force::Bool ) =
+#    re_meme_all_biclusters_parallel( clusters, force, false )
+
+function re_meme_all_biclusters_parallel( clusters::Dict{Int64,bicluster}, force::Bool=false, verbose::Bool=false )
     global k_clust, allSeqs_fname, iter, n_iters
     data::Array{Any,1} = []
     n_motifs = get_n_motifs( iter, n_iters )
+    r_rownames = rownames(ratios)
     for k in 1:k_clust
         b = clusters[k]
         if ! force && ! b.changed[1] continue; end ## If rows not changed, skip it
-        seqs = get_sequences( rownames(ratios)[b.rows] ) 
-        dat = { "k" => b.k, "seqs" => seqs, "allSeqs_fname" => allSeqs_fname, "n_motifs" => n_motifs };
+        seqs = get_sequences( r_rownames[b.rows] ) 
+        #seqs = filter_sequences( seqs )
+        dat = { "k" => b.k, "seqs" => seqs, "allSeqs_fname" => allSeqs_fname, "n_motifs" => n_motifs, "verbose" => verbose };
         push!( data, dat )
     end
     memeOut = pmap( re_meme_bicluster, data ) ## returns an Array{Any,1}
@@ -45,10 +50,10 @@ function re_meme_bicluster( x::Dict{Any,Any} )
         warn( "NO GENES! $k" )        
         return( (k, nothing, nothing) )
     end 
-    re_meme_bicluster(x["k"], x["seqs"], x["n_motifs"], x["allSeqs_fname"], false)
+    re_meme_bicluster(x["k"], x["seqs"], x["n_motifs"], x["allSeqs_fname"], x["verbose"])
 end
 
-function re_meme_all_biclusters( clusters::Dict{Int64,bicluster}, force::Bool )
+function re_meme_all_biclusters( clusters::Dict{Int64,bicluster}, force::Bool=false )
     global k_clust, iter, n_iters
     n_motifs = get_n_motifs( iter, n_iters )
     for k in 1:k_clust
@@ -60,7 +65,7 @@ function re_meme_all_biclusters( clusters::Dict{Int64,bicluster}, force::Bool )
     clusters
 end
 
-function re_meme_bicluster( b::bicluster, n_motifs::Int64 )
+function re_meme_bicluster( b::bicluster, n_motifs::Int=2 )
     global ratios, allSeqs_fname
     seqs = get_sequences( rownames(ratios)[b.rows] ) 
     (k, meme_out, mast_out) = re_meme_bicluster( b.k, seqs, n_motifs, allSeqs_fname, false )
@@ -70,7 +75,7 @@ function re_meme_bicluster( b::bicluster, n_motifs::Int64 )
 end
 
 function re_meme_bicluster( k::Int64, seqs::DataFrame, ##Matrix{ASCIIString}, 
-                           n_motifs::Int64, allSeqs_fname::ASCIIString, verbose::Bool )
+                           n_motifs::Int, allSeqs_fname::ASCIIString, verbose::Bool=false )
     #@time gibbs_out = gibbs_site_sampler(seqs["seq"].data)     ## run gibbs sampler on most "flagellar-enriched" cluster
     #@time gibbs_out2 = gibbs_site_sampler(seqs, gibbs_out["pssm"])
 
@@ -98,7 +103,7 @@ function re_meme_bicluster( k::Int64, seqs::DataFrame, ##Matrix{ASCIIString},
 end
 
 ## This is parallelizable because it sends the seqs to be searched to each node
-function do_meme(seqs::DataFrame, n_motifs::Int64, verbose::Bool) 
+function do_meme(seqs::DataFrame, n_motifs::Int=2, verbose::Bool=false) 
     global iter, n_iter, motif_width_range
     seqs = seqs[ seqs["seq"].data .!= "", : ]
     seqs = seqs[ ! duplicated(seqs["seq"].data), : ]

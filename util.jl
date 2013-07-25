@@ -101,6 +101,15 @@ end
 #     return a
 # end
 
+## note [a, [item]] works just as fast as this:
+# function append{T}(a::Array{T,1}, item::T)
+#     out = Array(T,length(a)+1)
+#     i = 0
+#     for x = a out[ i += 1 ] = x; end
+#     out[end] = item
+#     out
+# end
+
 function in{T}(a::Array{T}, b::Array{T})  ## in(a,b) same as a%in%b in R
     out = falses(length(a))
     for i = 1:length(a)
@@ -176,7 +185,7 @@ function nanmean{T}(x::AbstractArray{T}) ## This is a lot faster!
     v / nnnan
 end
 
-function nanvar{T}(x::AbstractArray{T}, m::AbstractArray{T}, corrected::Bool)
+function nanvar{T}(x::AbstractArray{T}, m::AbstractArray{T}, corrected::Bool=true)
     n = length(x)
     v=zero(T); xi=zero(T)
     for i=1:n
@@ -198,14 +207,14 @@ function nanvar{T}(x::AbstractArray{T}, m::T, corrected::Bool)
     v / (length(x) - (corrected ? one(T) : zero(T))) ##dot(x, x)
 end
 
-nanvar(x::AbstractArray, corrected::Bool) = nanvar(x, nanmean(x), corrected)
-nanvar(x::AbstractArray) = nanvar(x, true)
+nanvar(x::AbstractArray, corrected::Bool=true) = nanvar(x, nanmean(x), corrected)
+#nanvar(x::AbstractArray) = nanvar(x, true)
 
-nansd{T}(x::AbstractArray{T}, m::AbstractArray{T}, corrected::Bool) = sqrt(nanvar(x, m, corrected))
-nansd{T}(x::AbstractArray{T}, m::T, corrected::Bool) = sqrt(nanvar(x, m, corrected))
-nansd{T}(x::AbstractArray{T}, corrected::Bool) = nansd(x, nanmean(x), corrected)
-nansd{T}(x::AbstractArray{T}) = nansd(x, true)
-nansd{T}(x::Vector{T}) = nansd(x, true)
+nansd{T}(x::AbstractArray{T}, m::AbstractArray{T}, corrected::Bool=true) = sqrt(nanvar(x, m, corrected))
+nansd{T}(x::AbstractArray{T}, m::T, corrected::Bool=true) = sqrt(nanvar(x, m, corrected))
+nansd{T}(x::AbstractArray{T}, corrected::Bool=true) = nansd(x, nanmean(x), corrected)
+#nansd{T}(x::AbstractArray{T}) = nansd(x, true)
+#nansd{T}(x::Vector{T}) = nansd(x, true)
 
 stdize_vector{T}( x::AbstractArray{T} ) =  ( x .- nanmean(x) ) ./ nansd( x ) ## TODO: try Devectorize package???
 sdize_vector{T}( x::AbstractArray{T} ) =  x ./ nansd( x )

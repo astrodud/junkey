@@ -1,5 +1,5 @@
 ##require( "base.jl" ) ## required to overrequire 'size' and other funcs
-import Base.size, Base.ndims, Base.print_matrix, Base.isnan, Base.ref, Base.convert
+#import Base.size, Base.ndims, Base.print_matrix, Base.isnan, Base.ref, Base.convert
 
 ## Let's make rnames/cnames possible! Use a Dict for the rnames -> int lookup
 # rnames = Dict{ASCIIString,Int64}()
@@ -45,27 +45,27 @@ end
 #     o
 # end
 
-size(x::NamedMatrix,ind::Int64) = size(x.x,ind)
-size(x::NamedMatrix) = size(x.x)
-nrow(x::NamedMatrix) = size(x,1)
-ncol(x::NamedMatrix) = size(x,2)
-ndims(x::NamedMatrix) = ndims(x.x)
-function print_matrix(IOStream,x::NamedMatrix) 
-    print_matrix(IOStream,x.x) ## Update it to print row/col names too
-    println()
-    println(IOStream,x.rnames)
-    println(IOStream,x.cnames)
-end
+# size(x::NamedMatrix,ind::Int64) = size(x.x,ind)
+# size(x::NamedMatrix) = size(x.x)
+# nrow(x::NamedMatrix) = size(x,1)
+# ncol(x::NamedMatrix) = size(x,2)
+# ndims(x::NamedMatrix) = ndims(x.x)
+# function print_matrix(IOStream,x::NamedMatrix) 
+#     print_matrix(IOStream,x.x) ## Update it to print row/col names too
+#     println()
+#     println(IOStream,x.rnames)
+#     println(IOStream,x.cnames)
+# end
 
-ref(x::NamedMatrix, i::ASCIIString, j::ASCIIString) = x.x[x.rnames[i],x.cnames[j]]
-ref(x::NamedMatrix, I::Vector{ASCIIString}, J::Vector{ASCIIString}) =
-                   NamedMatrix{eltype(x.x)}( [ x[i,j] for i=I, j=J ], I, J )
-ref(x::NamedMatrix, i::ASCIIString, J::Vector{ASCIIString}) = x[[i],J]
-ref(x::NamedMatrix, I::Vector{ASCIIString}, j::ASCIIString) = x[I,[j]]
-ref(x::NamedMatrix, i::Range1{Int64}, j::ASCIIString) = x.x[i,x.cnames[j]]
-ref(x::NamedMatrix, i::ASCIIString, j::Range1{Int64}) = x.x[x.rnames[i],j]
-ref(x::NamedMatrix, i::Int64, j::ASCIIString) = x.x[i,x.cnames[j]]
-ref(x::NamedMatrix, i::ASCIIString, j::Int64) = x.x[x.rnames[i],j]
+# ref(x::NamedMatrix, i::ASCIIString, j::ASCIIString) = x.x[x.rnames[i],x.cnames[j]]
+# ref(x::NamedMatrix, I::Vector{ASCIIString}, J::Vector{ASCIIString}) =
+#                    NamedMatrix{eltype(x.x)}( [ x[i,j] for i=I, j=J ], I, J )
+# ref(x::NamedMatrix, i::ASCIIString, J::Vector{ASCIIString}) = x[[i],J]
+# ref(x::NamedMatrix, I::Vector{ASCIIString}, j::ASCIIString) = x[I,[j]]
+# ref(x::NamedMatrix, i::Range1{Int64}, j::ASCIIString) = x.x[i,x.cnames[j]]
+# ref(x::NamedMatrix, i::ASCIIString, j::Range1{Int64}) = x.x[x.rnames[i],j]
+# ref(x::NamedMatrix, i::Int64, j::ASCIIString) = x.x[i,x.cnames[j]]
+# ref(x::NamedMatrix, i::ASCIIString, j::Int64) = x.x[x.rnames[i],j]
 ## How to allow combos of string vectors and int indexes? Seems complicated.
 ## How to allow combos of string vectors and ranges? Seems complicated.
 ## How to allow combos of int vectors and/or ranges and/or int indexes? Seems complicated.

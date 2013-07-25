@@ -42,10 +42,10 @@ function get_floc_scoresDF_cols(cluster::bicluster)
 end
 
 ## Default: allow best 5 row- and 20 col- moves per bicluster instead of all of them!
-get_floc_scores_all(clusters::Dict{Int64,bicluster}) = get_floc_scores_all(clusters, 9999, 9999) ## 5, 20)
+#get_floc_scores_all(clusters::Dict{Int64,bicluster}) = get_floc_scores_all(clusters, 9999, 9999) ## 5, 20)
 
 ## Get gain scores for all possible row/col moves
-function get_floc_scores_all(clusters::Dict{Int64,bicluster}, max_row::Int64, max_col::Int64) 
+function get_floc_scores_all(clusters::Dict{Int64,bicluster}, max_row::Int64=9999, max_col::Int64=9999) 
     global k_clust
 
     ## First, collate move scores into a single DataFrame for stochastic sorting
@@ -116,10 +116,10 @@ function get_floc_scores_all(clusters::Dict{Int64,bicluster}, max_row::Int64, ma
     scores
 end
 
-get_floc_scores_best( scores::DataFrame ) = get_floc_scores_best( scores, 3, 3 ) ## default n_best=2
+#get_floc_scores_best( scores::DataFrame ) = get_floc_scores_best( scores, 3, 3 ) ## default n_best=2
 
 ## Instead of scores for ALL possible moves, make a matrix of n_best best scores for each row/col
-function get_floc_scores_best( scores::DataFrame, n_best_row::Int64, n_best_col::Int64 )
+function get_floc_scores_best( scores::DataFrame, n_best_row::Int64=3, n_best_col::Int64=3 )
     dfs_r::Vector{AbstractDataFrame} = [ sub( scores, :(is_row_col .== 'r') ) ]
     if n_best_row < 9999  ## Now uses the nice functions in DataFrame like with() or group() or some such
         tmp = groupby( dfs_r[1], "row_col_ind" ) ## Cool!
@@ -151,9 +151,9 @@ function get_floc_scores_best( scores::DataFrame, n_best_row::Int64, n_best_col:
     scores2
 end
 
-rnd_bubblesort( scores::Vector{Float32} ) = rnd_bubblesort( scores, nothing )
+#rnd_bubblesort( scores::Vector{Float32} ) = rnd_bubblesort( scores, nothing )
 
-function rnd_bubblesort( scores::Vector{Float32}, Nrepeats )
+function rnd_bubblesort( scores::Vector{Float32}, Nrepeats=nothing )
     const lsc = length(scores)
     if Nrepeats == nothing Nrepeats = lsc * 2; end
     ord::Vector{Int32} = shuffle!( [1:lsc] ) ## start w/ random order
@@ -185,7 +185,7 @@ end
 #floc_update(clusters) = floc_update(clusters, 25)
 
 ## TODO: add max_improvements param (to prevent really fast optimization at beginning before motifing turns on)
-function floc_update(clusters::Dict{Int64,bicluster}, max_no_improvements)
+function floc_update(clusters::Dict{Int64,bicluster}, max_no_improvements=25)
     global k_clust, ratios, string_net
 
     scores::DataFrame = get_floc_scores_all(clusters);
@@ -281,7 +281,7 @@ end
 function do_floc(clusters::Dict{Int64,bicluster})
     global iter, k_clust
     ##clusters = fill_cluster_scores(clusters) ## dont need this since each cluster's scores are updated in floc_update
-    (clusters, n_improvements, n_tries, scores) = floc_update(clusters, k_clust); ## allow more updates if there are more clusters??? Tuned to k_clust/2 for Hpy (where k_clust is 75) -- may need additional tuning
+    (clusters, n_improvements, n_tries, scores) = floc_update(clusters, k_clust/2); ## allow more updates if there are more clusters??? Tuned to k_clust/2 for Hpy (where k_clust is 75) -- may need additional tuning
     (weight_r, weight_n, weight_m, weight_c, weight_v, weight_g) = get_score_weights( iter )
     (weight_r_new, weight_n_new, weight_m_new, weight_c_new, weight_v_new, weight_g_new) = get_score_weights( iter + 1 )
     n_motifs = get_n_motifs()
