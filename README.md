@@ -6,7 +6,7 @@ Currently works with the latest master [Julia](http://julialang.org/) [v0.2.0](h
 Requires the latest
 [DataFrames](https://github.com/HarlanH/DataFrames.jl),
 [Distributions](https://github.com/JuliaStats/Distributions.jl),
-and [Distributions](https://github.com/johnmyleswhite/Clustering.jl)
+and [Clustering](https://github.com/johnmyleswhite/Clustering.jl)
 packages.
 
 <a name="Running"/>
