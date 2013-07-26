@@ -179,7 +179,7 @@ function load_junkey_code(path)
 end
 
 function junkey_init(organism, k_clust)
-    global ratios
+    global ratios, distance_scan, distance_search
     println(organism)
 
     ## TODO: shouldn't store ratios, k_clust in this file; this is just organism/genome data
@@ -192,6 +192,8 @@ function junkey_init(organism, k_clust)
         if filesize(allSeqs_fname) <= 0 
             all_seqs_scan = get_sequences(anno["sysName"].data,anno,genome_seqs,true,op_table,distance_scan,false); 
             all_seqs_scan = all_seqs_scan[ find(all_seqs_scan[:,1].!=""), : ]
+            all_seqs_scan = filter_sequences( all_seqs_scan, distance_scan )
+
             writeFasta( all_seqs_scan, allSeqs_fname )
         end
         return( (ratios, genome_seqs, anno, op_table, string_net, ##all_seqs, all_seqs_scan, 
@@ -230,9 +232,12 @@ function junkey_init(organism, k_clust)
     ##   Use generate_all_kmers() for that.
     ## TODO: Need to include vague IUPAC symbols better
     all_seqs = get_sequences(anno["sysName"].data,anno,genome_seqs,true,op_table,distance_search,false); 
-    all_seqs_scan = get_sequences(anno["sysName"].data,anno,genome_seqs,true,op_table,distance_scan,false); 
     all_seqs = all_seqs[ find(all_seqs[:,1].!=""), : ] 
+    all_seqs = filter_sequences( all_seqs, distance_search )
+
+    all_seqs_scan = get_sequences(anno["sysName"].data,anno,genome_seqs,true,op_table,distance_scan,false); 
     all_seqs_scan = all_seqs_scan[ find(all_seqs_scan[:,1].!=""), : ]
+    all_seqs_scan = filter_sequences( all_seqs_scan, distance_scan )
 
     allSeqs_fname = "junkey/$(organism)/allSeqs.fst"
     writeFasta( all_seqs_scan, allSeqs_fname ) ## NOTE all_seqs_scan are not used from here on
@@ -255,7 +260,7 @@ function init_biclusters( x, k_clust, method="kmeans" )
     ## DONE: use k_means from Clustering package
     clusters = Dict{Int64,bicluster}()
 
-    if method == "kmeans"
+    if method == "kmeans" || method == "kmeans+random"
         xx = x.x;
         is_nan = isnan(xx)
         xx[is_nan] = rand(sum(is_nan))*0.1 - 0.05; ## randomize a bit; note this works on the original (global) x!
@@ -271,10 +276,13 @@ function init_biclusters( x, k_clust, method="kmeans" )
         #     end
         
         ## seed each bicluster with rows=output from kmeans and cols=random (1/2 of all cols)
-        ## add some random rows to each bicluster
         for k=1:k_clust
             rows = findin(assignments, k)
-            clusters[k] = bicluster( k, unique([ rows, randperm(size(xx,1))[1:length(rows)] ]), x )
+            if method == "kmeans" 
+                clusters[k] = bicluster( k, rows, x )
+            elseif method == "kmeans+random" ##         ## add some random rows to each bicluster
+                clusters[k] = bicluster( k, unique([ rows, randperm(size(xx,1))[1:length(rows)] ]), x )
+            end
         end
         xx[is_nan] = NA ## reset the values to NA
     elseif method == "random"

@@ -6,10 +6,13 @@ debug.on()
 require(multicore)
 options(cores=4)
 
-organism <- 'eco'
-organism.dir <- paste(toupper(substr(organism,1,1)),substr(organism,2,3),sep='')
+if ( ! exists( 'organism.dir' ) ) {
+  if ( exists( 'organism' ) ) organism.dir <- organism
+  else organism.dir <- 'Eco'
+}
+organism <- paste(tolower(substr(organism.dir,1,1)),substr(organism.dir,2,3),sep='')
 
-x=read.delim("clusters.tsv")
+x=read.delim(sprintf("output/%s_clusters.tsv", organism.dir))
 for (i in c('resid','dens_string','meanp_meme')) x[[i]] = as.numeric(gsub('f0','',as.character(x[[i]])))
 e=cmonkey.init(organism=organism, bg.order=0, k.clust=nrow(x), ratios=sprintf('~/scratch/julia/junkey/%s/ratios.tsv', organism.dir),
   n.motifs=2, discard.genome=F, parallel.cores=options('cores'), parallel.cores.motif=options('cores'))
@@ -73,4 +76,4 @@ rm(tmp); gc()
 
 e$meme.scores[[seq.type]]$all.pv <- e$make.pv.ev.matrix( e$meme.scores[[seq.type]] )
 
-save( e, file=sprintf('%s_out.RData', organism.dir) )
+save( e, file=sprintf('output/%s_out.RData', organism.dir) )

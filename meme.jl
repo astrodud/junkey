@@ -2,7 +2,8 @@
 ##    through to all child nodes. Need to make a function that takes a single argument (Dict?) and use pmap().
 ## DONE: Add n_motifs to the schedule so it ups to 2 after n_iters*3/4 iterations -- NOTE needs to get passed to
 ##    child processes
-## TODO: add min/max_width and search/scan_distance paramters as globals (e.g. to change for yeast)
+## DONE: add min/max_width and search/scan_distance paramters as globals (e.g. to change for yeast)
+## DONE: add filter_sequences function to run dust and remove ATGs
 
 ##re_meme_all_biclusters_parallel( clusters ) = re_meme_all_biclusters_parallel( clusters, false )
 
@@ -21,7 +22,7 @@ end
 #    re_meme_all_biclusters_parallel( clusters, force, false )
 
 function re_meme_all_biclusters_parallel( clusters::Dict{Int64,bicluster}, force::Bool=false, verbose::Bool=false )
-    global k_clust, allSeqs_fname, iter, n_iters
+    global k_clust, allSeqs_fname, iter, n_iters, distance_search
     data::Array{Any,1} = []
     n_motifs = get_n_motifs( iter, n_iters )
     r_rownames = rownames(ratios)
@@ -29,7 +30,7 @@ function re_meme_all_biclusters_parallel( clusters::Dict{Int64,bicluster}, force
         b = clusters[k]
         if ! force && ! b.changed[1] continue; end ## If rows not changed, skip it
         seqs = get_sequences( r_rownames[b.rows] ) 
-        #seqs = filter_sequences( seqs )
+        seqs = filter_sequences( seqs, distance_search )
         dat = { "k" => b.k, "seqs" => seqs, "allSeqs_fname" => allSeqs_fname, "n_motifs" => n_motifs, "verbose" => verbose };
         push!( data, dat )
     end
@@ -66,8 +67,9 @@ function re_meme_all_biclusters( clusters::Dict{Int64,bicluster}, force::Bool=fa
 end
 
 function re_meme_bicluster( b::bicluster, n_motifs::Int=2 )
-    global ratios, allSeqs_fname
+    global ratios, allSeqs_fname, distance_search
     seqs = get_sequences( rownames(ratios)[b.rows] ) 
+    seqs = filter_sequences( seqs, distance_search )
     (k, meme_out, mast_out) = re_meme_bicluster( b.k, seqs, n_motifs, allSeqs_fname, false )
     b.meme_out = meme_out
     b.mast_out = mast_out

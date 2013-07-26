@@ -1,4 +1,5 @@
-x=read.delim("stats.tsv")
+if ( ! exists( 'organism' ) ) organism <- 'Hpy'
+x=read.delim(sprintf("output/%s_stats.tsv", organism))
 for(i in 1:ncol(x)){
   if(class(x[[i]])=='factor'){
     if(x[[i]][1]%in%c('true','false')) x[[i]]=as.logical(x[[i]])

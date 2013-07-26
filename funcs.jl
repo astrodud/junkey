@@ -1,5 +1,5 @@
 function run_junkey()
-    global iter, n_iters, clusters, stats_df
+    global organism, iter, n_iters, clusters, stats_df
 
     n_no_improvements = 0
     for i=iter:n_iters
@@ -7,7 +7,7 @@ function run_junkey()
         (clusters, n_improvements, stats_tmp) = do_floc( clusters );
         println( @sprintf( "%.3f", (time() - startTime)/60 ), " minutes since initialization" )
         stats_df = rbind( stats_df, stats_tmp )
-        write_table( "stats.tsv", stats_df ) 
+        write_table( "output/$(organism)_stats.tsv", stats_df ) 
         if n_improvements <= 0 n_no_improvements += 1 else n_no_improvements = 0; end
         if iter > n_iters/2 && n_no_improvements > 5 break; end
     end

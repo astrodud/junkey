@@ -112,7 +112,7 @@ function get_floc_scores_all(clusters::Dict{Int64,bicluster}, max_row::Int64=999
 
     scores = vcat(scoresDF_r, scoresDF_c)
     ##println(scores)
-    #write_table("scores.tsv",scores) 
+    #write_table("output/$(organism)_scores.tsv",scores) 
     scores
 end
 

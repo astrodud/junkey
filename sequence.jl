@@ -6,10 +6,10 @@
 #get_sequences( genes::Vector{ASCIIString}, op_shift::Bool, distance::Vector{Int64} ) =
 #                           get_sequences( genes, op_shift, distance, false )
 
-get_sequences( genes::Vector{ASCIIString} ) = get_sequences( genes, true, distance_search )
+#get_sequences( genes::Vector{ASCIIString} ) = get_sequences( genes, true, distance_search )
 
 ## This version of the function only works after anno/genome_seq/op_table have been set to a global var.
-function get_sequences( genes::Vector{ASCIIString}, op_shift::Bool, distance::Vector{Int64}, debug::Bool=false )
+function get_sequences( genes::Vector{ASCIIString}, op_shift=true, distance::Vector{Int64}=distance_search, debug::Bool=false )
     global anno, genome_seqs, op_table;
     get_sequences( genes, anno, genome_seqs, op_shift, op_table, distance, debug )
 end
@@ -55,6 +55,40 @@ function get_sequences( genes::Vector{ASCIIString}, anno::DataFrame, genome_seqs
     ##seqs
     out = rbind(seqs)
     out
+end
+
+function filter_sequences( seqs::DataFrame, distance=distance_search, remove_repeats=true, remove_atgs=true )
+    seqs = seqs[ seqs["seq"] .!= "", : ] ## remove all empty sequences; they cause heartburn.
+
+    if remove_repeats == true ##&& length( grep( "NNNNNN", seqs ) ) <= 1
+       ##if verbose println( "Removing low-complexity regions from sequences.\n" ); end
+       fname = tempname()
+       writeFasta( seqs, fname )
+       tmp = system( `./progs/dust $fname` ) ## note dust as an optional numeric parameter -- what does it mean?
+       rm( fname )
+       (fname,io) = mktemp()
+       for line in tmp write(io, "$(line)\n"); end
+       close( io )
+       seqs_new = readFastaDNA( fname )
+       rm( fname )
+       if size(seqs,1) != size(seqs_new,1) 
+           warn( "Remove low complexity failed - skipping!" )
+       elseif all(seqs["gene"] .== seqs_new["gene"])
+           seqs_new["upstream_gene"] = seqs["upstream_gene"]
+           seqs = seqs_new
+       end
+    end
+
+    if remove_atgs && any( distance .< 0 ) 
+        nnnn = convert(Vector{Uint8}, "NNNN")
+        for i in 1:size(seqs,1)
+            ss = convert(Vector{Uint8}, seqs["seq"][i])
+            ss[ (distance[2]+1):(distance[2]+4) ] = nnnn  ## Mask out ATGs (why 4 instead of 3?)
+            seqs["seq"][i] = convert(ASCIIString, ss)
+        end
+    end
+
+    seqs
 end
 
 function get_genome_seq( genome_seqs::DataFrame, scaffoldId::Int64 )
