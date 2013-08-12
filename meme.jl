@@ -189,7 +189,7 @@ function do_mast(memeOut, allSeqs_fname, get_allHitsTab, verbose)
 
 ## OK, now parse the 3rd section
     reg = r"COMBINED P-VALUE"
-    lines = find( [ ismatch( reg, mastOut[ i ] ) for i=1:length(mastOut) ] )
+    lines = find( [ ismatch( reg, mastOut[ i ] ) for i=1:length(mastOut) ] .== true )
     genes = convert( Array{ASCIIString}, mastOut[ lines-2 ] )
     reg = r"COMBINED P-VALUE = (.+)(\s+E-VALUE)"
     tmp = [ match(r"COMBINED P-VALUE = (.+)(\s+E-VALUE = (.*))", mastOut[i]).captures[[1,3]] for i=lines ]

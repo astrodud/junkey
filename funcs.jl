@@ -68,20 +68,26 @@ bicluster_volume( b::bicluster ) = float32( length(b.rows) * length(b.cols) )
 function re_seed_bicluster_if_necessary( clust::bicluster )
     const min_rows = 3; const max_rows = 80
     if length(clust.rows) < min_rows ||  ## Need to fill in "empty" clusters, mostly because var is non-defined, Also because meme-ing only works with >2 sequences
-        length(clust.rows) > max_rows   ### Squash clusters that get way too big (TODO: just remove some to bring it down to max_rows)
+        length(clust.rows) > max_rows   ### Squash clusters that get way too big (DONE: just remove some to bring it down to max_rows)
         nr = length(clust.rows)
         warn( "RESEEDING BICLUSTER $(clust.k) ($nr)" )
     ## DONE: add rows that are preferentially in few (or no) other clusters -- sample from get_cluster_row_counts(clusters)
     ##clust.rows = unique([clust.rows, [Distributions.sample([1:nrow(ratios.x)]) for i=1:5]]) ## add 5 random rows
         counts_g::Vector{Float32} = float32(get_cluster_row_counts(clusters))
-        counts_g = max(counts_g) + 0.01 - counts_g
-        counts_g = counts_g / max(counts_g)
         if length(clust.rows) < min_rows 
-            clust.rows = unique([clust.rows, [Distributions.sample([1:length(counts_g)], counts_g) for i=1:5]]) ## add 5 new genes from genes in few clusters
+            counts_g = max(counts_g) + 0.01 - counts_g
+            counts_g = counts_g / max(counts_g)
+            clust.rows = unique( my_sampler( [1:length(counts_g)], 5, counts_g ) )
+            #clust.rows = unique([clust.rows, [Distributions.sample([1:length(counts_g)], counts_g) for i=1:5]]) 
             clust.cols = unique([clust.cols, [Distributions.sample([1:ncol(ratios.x)]) for 
                                               i=1:(div(ncol(ratios.x),3)-length(clust.cols))]])  ## add x/3 random cols
         elseif length(clust.rows) > max_rows
-            clust.rows = unique([Distributions.sample([1:length(counts_g)], counts_g) for i=1:max_rows]) ## remove some genes, include mostly from genes in few clusters
+            ##clust.rows = unique([Distributions.sample([1:length(counts_g)], counts_g) for i=1:max_rows]) ## remove some genes, include mostly from genes in few clusters
+            ##clust.rows = unique( my_sampler( [1:length(counts_g)], max_rows, counts_g ) ) ## remove some genes, include mostly from genes in few clusters
+            counts_g = ( counts_g + 0.01 ) / ( max(counts_g) + 0.01 )
+            tmp_rows = unique( my_sampler( clust.rows, length(clust.rows)-max_rows+1, counts_g[clust.rows] ) ) ## remove some genes, mostly that are in lots of clusters
+            ##println("REMOVING: ",tmp_rows," ",get_cluster_row_counts(clusters)[tmp_rows])
+            clust.rows = clust.rows[ ! in(clust.rows, tmp_rows) ]
         end
     end
     clust
@@ -291,7 +297,7 @@ end
 ## Find the flagellar cluster, whew!!!
 function clusters_w_func( func::ASCIIString, clusters, n_best=1 )
     global anno, ratios
-    inds = findn([ismatch(Regex(func),anno["desc"][i]) for i=1:size(anno,1)])
+    inds = findn([ismatch(Regex(func),anno["desc"][i]) for i=1:size(anno,1)] .== true)
     r_rownames = rownames(ratios)
     inds2 = int32([contains(r_rownames, anno["sysName"][i]) ? 
                    findn(r_rownames .== anno["sysName"][i])[1] : 0 for i=inds])

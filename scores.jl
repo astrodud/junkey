@@ -8,10 +8,12 @@
 ## Note can make these weights a global var and update them in this function.
 ## Just need to define them as global IN the function
 function get_score_weights(iter)
-    global n_iters, ratios
+    global n_iters, ratios, max_network_weight, max_motif_weight
+    const mn = max_network_weight
+    const mm = max_motif_weight
     weight_r =  1.0
-    weight_n = -0.1 * float32(iter-1) / n_iters   ## increase linearly from 0 at iter=1 to 0.9
-    weight_m =  0.8 * float32(iter-1) / n_iters * ((iter<=5) ? 0 : 1) ## ramp up from 0 to 1.8 starting at iter=6
+    weight_n = -mn  * float32(iter-1) / n_iters   ## increase linearly from 0 at iter=1 to 0.9
+    weight_m =  mm  * float32(iter-1) / n_iters * ((iter<=5) ? 0 : 1) ## ramp up from 0 to 1.8 starting at iter=6
     weight_c =  1.0 * size(ratios.x,1)/size(ratios.x,2)/12.0 ## ??? ## 1.2 works good for hpy
     weight_v =  0.1 + 0.3 * float32(iter-1) / n_iters  ## ramp up from 0.3 to 0.8
     weight_g =  0.1 + 0.1 * float32(iter-1) / n_iters  ## ramp up from 0.3 to 0.8
@@ -51,7 +53,8 @@ end
 ## DONE? less "sharply-peaked" at 15? Perhaps make it "level out" between say 8 and 23
 ## DONE: plot this and see -- I think it DECREASES for really big volumes, want to fix this
 function get_cluster_volume_row_scores( b::bicluster, is_in_r )
-    const thresh = 22
+    global avg_genes_per_cluster
+    const thresh = avg_genes_per_cluster
     lr = length(b.rows)
     score_vr = float32( [ ( is_in_r[i] ? +1 : -1) * ( thresh - lr ) for i in 1:length(is_in_r) ] )
     if lr >= thresh - 7 & lr <= thresh + 7 score_vr /= 5
@@ -71,7 +74,8 @@ end
 
 ## Scores for number of clusters each gene is in
 function get_cluster_row_count_scores( counts_g::Vector{Int32} )
-    const thresh = 1.3 ## 2.0 ## 3.0 ## lower is better; coerce removing if gene is in more than 2 clusters
+    global avg_clusters_per_gene
+    const thresh = avg_clusters_per_gene ##1.3 ## 2.0 ## 3.0 ## lower is better; coerce removing if gene is in more than 2 clusters
     float32(counts_g - thresh)
 end
 

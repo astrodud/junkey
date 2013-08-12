@@ -1,33 +1,24 @@
-## TODO: use pfork from PTools package
+## TODO: use pfork from PTools package -- need to write the equiv of a pmap() function.
 ## TODO: use named function arguments instead of all the multiply-defined funcs here
-
-require( "./junkey/requires.jl" ) ## This code will be loaded onto all nodes
 
 ## MAIN PROGRAM
 
-if ! isdefined(:organism)
-    #organism = "Hpy"; k_clust = 75
-    organism = "Eco"; k_clust = 450 
-    #organism = "Sce"; k_clust = 500
-    #organism = "Mpn"; k_clust = 75
-end
+using Clustering ## only needed on head node so included here instead of requires.jl
+
+@everywhere begin ## This code will be loaded onto all nodes
+
+require( "./junkey/includes.jl" )
 
 iter = 1
+require( "./junkey/params.jl" )
 
-if ! isdefined(:n_iters) n_iters = 100; end
+end   ## @everywhere
 
-## these are defaults (for microbes):
-if ! isdefined(:distance_search) distance_search = [-150,+20]; end 
-if ! isdefined(:distance_scan)   distance_scan =   [-250,+50]; end
-if ! isdefined(:motif_width_range) motif_width_range = [6,24]; end
-initialize_constants( organism ) ## update the three constants (above) for organism specific (e.g. yeast), also does so on cluster nodes
-
-if isinteractive() ## This stuff below should ONLY run on the head node
+if myid() == 1 ## This stuff below should ONLY run on the head node
 
 (ratios, genome_seqs, anno, op_table, string_net, allSeqs_fname, all_bgFreqs, all_genes) = junkey_init(organism, k_clust);
 
-## DONE: set "default" k_clust if not already set:
-if ! isdefined(:k_clust) k_clust = round( size( ratios, 1 ) / 10 ); end
+reload( "./junkey/params.jl" ) ## include this again to set data-dependent defaults (e.g. k_clust=nrow(ratios)/10)
 
 if nprocs() > 1 pre_load_child_nodes(); end ## send ratios, string_net, k_clust, etc. over to children
 gc()
@@ -36,8 +27,7 @@ gc()
 junkey_code = load_junkey_code("junkey")
 
 startTime = time()
-srand( 10 ) ## AFAIK random numbers are only used on the head node (during init/reseed and floc update)
-clusters = init_biclusters( ratios, k_clust, "kmeans+random" );
+clusters = init_biclusters( ratios, k_clust, "random" );
 if nprocs() > 1 clusters = fill_all_cluster_scores_parallel( clusters, true, true );
 else clusters = fill_all_cluster_scores( clusters, true, true ); end
 println( @sprintf( "%.3f", (time() - startTime)/60 ), " minutes since initialization" )
@@ -77,5 +67,4 @@ println( @sprintf( "%.3f", (endTime - startTime)/60 ), " minutes since initializ
 #@time gibbs_out = gibbs_site_sampler(seqs[:,2])     ## run gibbs sampler on most "flagellar-enriched" cluster
 #@time gibbs_out2 = gibbs_site_sampler(seqs, gibbs_out["pssm"])
 
-
-end; ## isinteractive()
+end; ## myid() == 1

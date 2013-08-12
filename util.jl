@@ -280,3 +280,18 @@ function reverse_dict( d::Dict ) ## reverse keys <-> elements for a dict
     for i=1:length( d ) out[ d[ k[ i ] ] ] = k[ i ]; end
     out
 end
+
+function my_sampler( x::Vector, n, probs::Vector )
+    ind = 0
+    to_samp = [1:length(x)]
+    out_rows = zeros(Int, n)
+    while ind < n ## add 5 new genes from genes in few clusters -- need to do my own sampler
+        tmp_row = Distributions.sample( to_samp )
+        if rand() <= probs[tmp_row]
+            ind += 1
+            out_rows[ind] = x[tmp_row]
+        end
+        ##println(tmp_row," ",x[tmp_row]," ",ind)
+    end
+    out_rows
+end

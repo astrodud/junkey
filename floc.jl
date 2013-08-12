@@ -1,4 +1,4 @@
-## Use FLOC algorithm to update clusters
+# Use FLOC algorithm to update clusters
 
 function get_floc_scoresDF_rows(cluster::bicluster, counts_g::Vector{Int32})
     inds = [1:length(cluster.scores_r)]
@@ -279,9 +279,11 @@ function floc_update(clusters::Dict{Int64,bicluster}, max_no_improvements=25)
 end
 
 function do_floc(clusters::Dict{Int64,bicluster})
-    global iter, k_clust
+    global iter, k_clust, max_improvements_per_iter
     ##clusters = fill_cluster_scores(clusters) ## dont need this since each cluster's scores are updated in floc_update
-    (clusters, n_improvements, n_tries, scores) = floc_update(clusters, k_clust/2); ## allow more updates if there are more clusters??? Tuned to k_clust/2 for Hpy (where k_clust is 75) -- may need additional tuning
+    ## allow more updates if there are more clusters??? Tuned to k_clust/2 for Hpy (where k_clust is 75) -- 
+    ##    may need additional tuning; e.g. for eco (k_clust=450), k_clust/2 is too high
+    (clusters, n_improvements, n_tries, scores) = floc_update(clusters, max_improvements_per_iter); 
     (weight_r, weight_n, weight_m, weight_c, weight_v, weight_g) = get_score_weights( iter )
     (weight_r_new, weight_n_new, weight_m_new, weight_c_new, weight_v_new, weight_g_new) = get_score_weights( iter + 1 )
     n_motifs = get_n_motifs()
