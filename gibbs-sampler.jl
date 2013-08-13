@@ -490,7 +490,7 @@ gibbs_site_sampler( seqs ) = gibbs_site_sampler( seqs, nothing )
 seqs = get_sequences(genes)[:,3]
 seqs = keys( table( seqs ) ) ## uniquify the seqs
 
-srand(10)
+#srand(10)
 
 if false #true
 insertion = "GAATACGATGAG"

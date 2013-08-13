@@ -476,7 +476,7 @@ gibbs_test = function(genes)##,anno,genome_seq,op_table)
     seqs = get_sequences(genes)[:,3]
     seqs = keys( table( seqs ) ) ## uniquify the seqs
 
-    srand(10)
+    #srand(10)
 
     if false
         insertion = "GAATACGATGAG"
