@@ -124,13 +124,13 @@ function do_meme(seqs::DataFrame, n_motifs::Int=2, verbose::Bool=false)
     memeOut
 end
 
-function do_mast(memeOut, verbose::Bool)
+function do_mast(memeOut, verbose::Bool=true)
     global allSeqs_fname
-    do_mast(memeOut, allSeqs_fname, false, true)
+    do_mast(memeOut, allSeqs_fname, false, verbose)
 end
                         
 ## this IS parallelizable b/c it just uses the allSeqs_fname file for reading, which was already created
-function do_mast(memeOut, allSeqs_fname, get_allHitsTab, verbose) 
+function do_mast(memeOut, allSeqs_fname, get_allHitsTab=false, verbose=true) 
     (memeOutFname,str) = mktemp()
     for i=memeOut write( str, "$i\n" ); end
     close( str )
@@ -193,8 +193,8 @@ function do_mast(memeOut, allSeqs_fname, get_allHitsTab, verbose)
     genes = convert( Array{ASCIIString}, mastOut[ lines-2 ] )
     reg = r"COMBINED P-VALUE = (.+)(\s+E-VALUE)"
     tmp = [ match(r"COMBINED P-VALUE = (.+)(\s+E-VALUE = (.*))", mastOut[i]).captures[[1,3]] for i=lines ]
-    pvals = float32( [ parse_float( tmp[i][1] ) for i=1:length(tmp) ] )
-    evals = float32( [ parse_float( tmp[i][2] ) for i=1:length(tmp) ] )
+    pvals = float32( [ parse_float( strip(tmp[i][1]) ) for i=1:length(tmp) ] )
+    evals = float32( [ parse_float( strip(tmp[i][2]) ) for i=1:length(tmp) ] )
     mastOutTab = DataFrame( { "Gene" => genes, "E-value" => evals, "P-value" => pvals } )
 
     rm( memeOutFname )

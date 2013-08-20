@@ -17,12 +17,16 @@ if ! isdefined(:ratios_file) ratios_file = "./junkey/$organism/ratios.tsv"; end
 
 if ! isdefined(:n_iters) n_iters = 100; end
 
-## these are defaults (for microbes):
-if ! isdefined(:distance_search) distance_search = [-150,+20]; end 
-if ! isdefined(:distance_scan)   distance_scan =   [-250,+50]; end
+## these are defaults (for small microbes like Halo):
+if ! isdefined(:distance_search) distance_search = [-150,+10]; end 
+if ! isdefined(:distance_scan)   distance_scan =   [-250,+20]; end
 if ! isdefined(:motif_width_range) motif_width_range = [6,24]; end
 
-if organism == "Sce"
+if organism == "Eco"
+#    if ! isdefined(:distance_search) distance_search = [-250,+30]; end 
+#    if ! isdefined(:distance_scan)   distance_scan =   [-500,+50]; end
+    if ! isdefined(:motif_width_range) motif_width_range = [6,30]; end
+elseif organism == "Sce"
     if ! isdefined(:distance_search) distance_search = [-250,+30]; end 
     if ! isdefined(:distance_scan)   distance_scan =   [-500,+50]; end
     if ! isdefined(:motif_width_range) motif_width_range = [6,18]; end

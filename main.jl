@@ -3,7 +3,7 @@
 
 ## MAIN PROGRAM
 
-using Clustering ## only needed on head node so included here instead of requires.jl
+using Clustering ## only needed on head node so included here instead of in includes.jl
 
 @everywhere begin ## This code will be loaded onto all nodes
 
@@ -24,7 +24,7 @@ if nprocs() > 1 pre_load_child_nodes(); end ## send ratios, string_net, k_clust,
 gc()
 
 ## Save junkey code for safe keeping
-junkey_code = load_junkey_code("junkey")
+junkey_code = load_junkey_code("junkey");
 
 startTime = time()
 clusters = init_biclusters( ratios, k_clust, "random" );
@@ -33,7 +33,7 @@ else clusters = fill_all_cluster_scores( clusters, true, true ); end
 println( @sprintf( "%.3f", (time() - startTime)/60 ), " minutes since initialization" )
 
 stats_df = DataFrame()
-run_junkey()
+run_junkey() ## Note this function can be run like this to restart from current iter
 
 println( "DONE!" )
 endTime = time()
@@ -53,7 +53,7 @@ save_jld( "output/$(organism)_out.jldz", (organism, k_clust, ratios, genome_seqs
                                    clusters, stats_df, junkey_code) )
 
 clusters_tab = clusters_to_dataFrame(clusters);
-write_table("output/$(organism)_clusters.tsv", clusters_tab)
+write_table("output/$(organism)_clusters.tsv", clusters_tab) ## for examination of clusters in R (via Rscripts/clusters.R)
 
 tmp = get_cluster_row_counts(clusters);
 println( sum(tmp.==0), " genes in no clusters" )

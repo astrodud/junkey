@@ -7,7 +7,11 @@ function run_junkey()
         (clusters, n_improvements, stats_tmp) = do_floc( clusters );
         println( @sprintf( "%.3f", (time() - startTime)/60 ), " minutes since initialization" )
         stats_df = rbind( stats_df, stats_tmp )
-        write_table( "output/$(organism)_stats.tsv", stats_df ) 
+        write_table( "output/$(organism)_stats.tsv", stats_df )
+        if isfile( "DO_SAVE" )  ## save cluster info for temporary examination of clusters (via Rscripts/clusters.R)
+            clusters_tab = clusters_to_dataFrame(clusters);
+            write_table("output/$(organism)_clusters.tsv", clusters_tab)
+        end
         if n_improvements <= 0 n_no_improvements += 1 else n_no_improvements = 0; end
         if iter > n_iters/2 && n_no_improvements > 5 break; end
     end

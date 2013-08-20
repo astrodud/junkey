@@ -14,8 +14,10 @@ organism <- paste(tolower(substr(organism.dir,1,1)),substr(organism.dir,2,3),sep
 
 x=read.delim(sprintf("output/%s_clusters.tsv", organism.dir))
 for (i in c('resid','dens_string','meanp_meme')) x[[i]] = as.numeric(gsub('f0','',as.character(x[[i]])))
-e=cmonkey.init(organism=organism, bg.order=0, k.clust=nrow(x), ratios=sprintf('~/scratch/julia/junkey/%s/ratios.tsv', organism.dir),
-  n.motifs=2, discard.genome=F, parallel.cores=options('cores'), parallel.cores.motif=options('cores'))
+if ( ! exists('ratios') ) ratios <- sprintf('~/scratch/julia/junkey/%s/ratios.tsv', organism.dir)
+if ( ! exists('n.motifs') ) n.motifs <- 2
+e=cmonkey.init(organism=organism, bg.order=0, k.clust=nrow(x),
+  discard.genome=F, parallel.cores=options('cores'), parallel.cores.motif=options('cores'))
 e$cmonkey.re.seed( e )
 sys.source("~/scratch/biclust/cmonkey-funcs.R",envir=e,chdir=T)
 e$row.score.func='default'

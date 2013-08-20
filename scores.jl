@@ -64,10 +64,10 @@ function get_cluster_volume_row_scores( b::bicluster, is_in_r )
 end
 
 ## Just up-weight moves that add columns (to prevent shrinkage)
-## NOOTE that as is, the weighting decreases for really high #cols... is this what we want?
+## NOTE that as is, the weighting decreases for really high #cols... is this what we want?
 function get_cluster_volume_col_scores( b::bicluster, is_in_c )
     lc = length(b.cols)
-    score_vc = float32( [ (is_in_c[i] ? +1 : -1) / lc for i in 1:length(is_in_c) ] )
+    score_vc = float32( [ (is_in_c[i] ? -1 : +1) / lc for i in 1:length(is_in_c) ] )
     ##score_vc = fill(NA, length(b.scores_c)) ## Do we really care how many cols there are?
     score_vc
 end

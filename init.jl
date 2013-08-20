@@ -7,6 +7,7 @@
 function load_ratios(rats_file)
     ## TODO: make it work for any organism; download the sequence/anno data using HTTP package; 
     ## DONE: try on bigger data; multiple chrome's
+    println(rats_file)
     x=readdlm(rats_file,'\t',ASCIIString)
     x_rnames=vec(x[2:end,1])
     x_cnames=vec(x[1,2:end])
