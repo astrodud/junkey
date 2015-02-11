@@ -147,11 +147,11 @@ function do_mast(memeOut, allSeqs_fname, get_allHitsTab=false, verbose=true)
         for j=3:length(mastOut)-2
             tmp = split( mastOut[j], r"\s+" )
             tmpHitsTab[ i,1 ] = tmp[1]
-            tmpHitsTab[ i,2 ] = parse_int(tmp[2])
-            tmpHitsTab[ i,3 ] = parse_int(tmp[3])
-            tmpHitsTab[ i,4 ] = parse_int(tmp[4])
-            tmpHitsTab[ i,5 ] = parse_float(tmp[5])
-            #tmpHitsTab[ i,6 ] = parse_float(tmp[6])
+            tmpHitsTab[ i,2 ] = parseint(tmp[2])
+            tmpHitsTab[ i,3 ] = parseint(tmp[3])
+            tmpHitsTab[ i,4 ] = parseint(tmp[4])
+            tmpHitsTab[ i,5 ] = parsefloat(tmp[5])
+            #tmpHitsTab[ i,6 ] = parsefloat(tmp[6])
             i += 1
         end
 
@@ -183,7 +183,7 @@ function do_mast(memeOut, allSeqs_fname, get_allHitsTab=false, verbose=true)
     # for i=1:length(mo)
     #     tmp = split( mo[i], r"\s+" )
     #     mo_seq[ i ] = tmp[1]
-    #     mo_ev[ i ] = parse_float(tmp[2])
+    #     mo_ev[ i ] = parsefloat(tmp[2])
     # end
     # mastOutTab = DataFrame( { "Gene" => mo_seq, "E-value" => mo_ev } )
 
@@ -193,8 +193,8 @@ function do_mast(memeOut, allSeqs_fname, get_allHitsTab=false, verbose=true)
     genes = convert( Array{ASCIIString}, mastOut[ lines-2 ] )
     reg = r"COMBINED P-VALUE = (.+)(\s+E-VALUE)"
     tmp = [ match(r"COMBINED P-VALUE = (.+)(\s+E-VALUE = (.*))", mastOut[i]).captures[[1,3]] for i=lines ]
-    pvals = float32( [ parse_float( strip(tmp[i][1]) ) for i=1:length(tmp) ] )
-    evals = float32( [ parse_float( strip(tmp[i][2]) ) for i=1:length(tmp) ] )
+    pvals = float32( [ parsefloat( strip(tmp[i][1]) ) for i=1:length(tmp) ] )
+    evals = float32( [ parsefloat( strip(tmp[i][2]) ) for i=1:length(tmp) ] )
     mastOutTab = DataFrame( { "Gene" => genes, "E-value" => evals, "P-value" => pvals } )
 
     rm( memeOutFname )

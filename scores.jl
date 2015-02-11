@@ -12,9 +12,9 @@ function get_score_weights(iter)
     const mn = max_network_weight
     const mm = max_motif_weight
     weight_r =  1.0
-    weight_n = -mn  * float32(iter-1) / n_iters   ## increase linearly from 0 at iter=1 to 0.9
-    weight_m =  mm  * float32(iter-1) / n_iters * ((iter<=5) ? 0 : 1) ## ramp up from 0 to 1.8 starting at iter=6
-    weight_c =  1.0 * size(ratios.x,1)/size(ratios.x,2)/12.0 ## ??? ## 1.2 works good for hpy
+    weight_n =  0.0 + -mn * float32(iter-1) / n_iters   ## increase linearly from 0 at iter=1 to 0.9
+    weight_m =  1.0 +  mm * float32(iter-1) / n_iters * ((iter<=5) ? 0 : 1) ## ramp up from 1 to 1.8 starting at iter=6
+    weight_c =  0.0 + 0.2 * size(ratios.x,1)/size(ratios.x,2)/12.0 ## ??? ## 1.2 works good for hpy
     weight_v =  0.1 + 0.3 * float32(iter-1) / n_iters  ## ramp up from 0.3 to 0.8
     weight_g =  0.1 + 0.1 * float32(iter-1) / n_iters  ## ramp up from 0.3 to 0.8
     (weight_r, weight_n, weight_m, weight_c, weight_v, weight_g)
@@ -119,7 +119,7 @@ function get_cluster_expr_rowcol_scores{T}( b::bicluster, x::NamedMatrix{T} ) ##
     if length(score_r) == 0 score_r = Array(T,size(x.x,1)); end
     tmpVec::Vector{T} = Array(T, size(xx,2))
     for r in 1:size(x.x,1) ## Iterate over rows
-       isIn = contains(rows, r) ##any(rows .== r) ## r is in the bicluster
+       isIn = in(rows, r) ##any(rows .== r) ## r is in the bicluster
        newR = isIn ? remove(rows,r) : [rows, [r]] ##append(rows, r) ##[rows,r] ## CANT DO: prevent reallocation of vector here?
        newvr = nanvar(x2[newR,:]) / ( nanvar(colmeans(xx[newR,:], tmpVec)) + var_add ) ## DONE -- prevent realloc of matrix here
        ## NOTE: the colmeans() above is the slow part here -- convince yourself that you need it!
@@ -135,7 +135,7 @@ function get_cluster_expr_rowcol_scores{T}( b::bicluster, x::NamedMatrix{T} ) ##
     ##v_factor = length(rows) / bsize
     if length(score_c) == 0 score_c = Array(T,size(x.x,2)); end
     for c in 1:size(x.x,2) ## Iterate over cols
-       isIn = contains(cols, c) ##any(cols .== c) ## c is in the bicluster
+       isIn = in(cols, c) ##any(cols .== c) ## c is in the bicluster
        newC = isIn ? remove(cols,c) : [cols, [c]] ##append(cols, c) ##[cols,c]
        newvr = nanvar(x2[:,newC]) / ( nanvar(mn[newC]) + var_add )
        score_c[c] = ( newvr - vr ) #/ (vr+0.01) ##+ ( isIn ? v_factor : -v_factor )
@@ -169,7 +169,7 @@ function get_cluster_network_row_scores( b::bicluster, network::DataFrame )
     if length(score_n) == 0 score_n = Array(Float32,size(ratios.x,1)); end    
     new_dens = 0.
     for r in r_rownames
-        isIn = contains(rows, r) 
+        isIn = in(rows, r) 
         if isIn ## r is in the bicluster -- remove the node from the bicluster-only subnetwork and recalc the density
             newR = remove(rows,r)
             new_net = sub( net2, findin( n2, newR ) ) ##net2[2].data, newR ) ) )
@@ -214,7 +214,7 @@ function get_cluster_meme_row_scores( b::bicluster )
     not_there = r_rownames[ ! in(r_rownames, b.mast_out["Gene"].data) ]
     for r in not_there pvals[r] = NA; end
     for g in r_rownames ## Iterate over rows
-       isIn = contains(genes, g) ##any(rows .== r) ## r is in the bicluster
+       isIn = in(genes, g) ##any(rows .== r) ## r is in the bicluster
        newR = isIn ? remove(genes,g) : [genes,[g]]
        pvs = float32( [ pvals[r] for r in newR ] )
        # pvs = df["P-value"].data

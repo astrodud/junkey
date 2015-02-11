@@ -35,7 +35,7 @@
 function hamming_distance( a::ASCIIString, b::ASCIIString, max::Uint8 ) 
     out::Uint8 = 0
     const one::Uint8 = uint8(1)
-    for i=1:min([length(a),length(b)])
+    for i=1:minimum([length(a),length(b)])
         if a[i] != b[i] out += one; end
         if out > max break; end
     end
@@ -139,7 +139,7 @@ end
 ## Or else use the values computed from each sequence above
 ## Can use this to compute if # of seqs that have this motif is significant
 ## e.g.:
-best_motif = keys(motifs)[findn(values(motifs).==max(values(motifs)))][1]
+best_motif = keys(motifs)[findn(values(motifs).==maximum(values(motifs)))][1]
 seq_hits = [ get(motifs_all_seqs[i][1],best_motif,0) for i=seqs[:,1] ]
 
 addprocs_local(3) ## flakey for interactive sessions!

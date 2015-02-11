@@ -16,7 +16,7 @@ x=read.delim(sprintf("output/%s_clusters.tsv", organism.dir))
 for (i in c('resid','dens_string','meanp_meme')) x[[i]] = as.numeric(gsub('f0','',as.character(x[[i]])))
 if ( ! exists('ratios') ) ratios <- sprintf('~/scratch/julia/junkey/%s/ratios.tsv', organism.dir)
 if ( ! exists('n.motifs') ) n.motifs <- 2
-e=cmonkey.init(organism=organism, bg.order=0, k.clust=nrow(x),
+e=cmonkey.init(organism=organism, bg.order=0, k.clust=nrow(x), seed.method=c( rows="rnd", cols="rnd" ),
   discard.genome=F, parallel.cores=options('cores'), parallel.cores.motif=options('cores'))
 e$cmonkey.re.seed( e )
 sys.source("~/scratch/biclust/cmonkey-funcs.R",envir=e,chdir=T)
@@ -33,6 +33,7 @@ bg.fname = e$genome.info$bg.fname[ seq.type ]
 #e$meme.scores[[1]] = tmp
 #rm(tmp);gc()
 
+options(cores=4)
 ##for (i in 1:nrow(x)) {
 tmp = mclapply(1:nrow(x), function(i){
   cat(i," ",x$k[i],"\n")

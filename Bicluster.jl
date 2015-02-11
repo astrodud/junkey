@@ -22,4 +22,5 @@ bicluster( k, rows::Vector, cols::Vector ) = bicluster( k, unique(rows), unique(
                                  Array(Float32,0), Array(Float32,0), Array(Float32,0), 
                                  Array(Float32,0), Array(ASCIIString,0), DataFrame(), trues(2) )
 
-bicluster( k, rows::Vector, x::NamedMatrix ) = bicluster( k, rows, randi(size(x.x,2),div(size(x.x,2),2)) )
+bicluster( k, rows::Vector, x::NamedMatrix ) = bicluster( k, rows, 
+                                 Distributions.sample([1:size(x.x,2)],div(size(x.x,2),2),replace=false,ordered=true) )

@@ -9,6 +9,7 @@ function run_junkey()
         stats_df = rbind( stats_df, stats_tmp )
         write_table( "output/$(organism)_stats.tsv", stats_df )
         if isfile( "DO_SAVE" )  ## save cluster info for temporary examination of clusters (via Rscripts/clusters.R)
+            warn( "Writing out clusters to output/$(organism)_clusters.tsv" )
             clusters_tab = clusters_to_dataFrame(clusters);
             write_table("output/$(organism)_clusters.tsv", clusters_tab)
         end
@@ -79,8 +80,8 @@ function re_seed_bicluster_if_necessary( clust::bicluster )
     ##clust.rows = unique([clust.rows, [Distributions.sample([1:nrow(ratios.x)]) for i=1:5]]) ## add 5 random rows
         counts_g::Vector{Float32} = float32(get_cluster_row_counts(clusters))
         if length(clust.rows) < min_rows 
-            counts_g = max(counts_g) + 0.01 - counts_g
-            counts_g = counts_g / max(counts_g)
+            counts_g = maximum(counts_g) + 0.01 - counts_g
+            counts_g = counts_g / maximum(counts_g)
             clust.rows = unique( my_sampler( [1:length(counts_g)], 5, counts_g ) )
             #clust.rows = unique([clust.rows, [Distributions.sample([1:length(counts_g)], counts_g) for i=1:5]]) 
             clust.cols = unique([clust.cols, [Distributions.sample([1:ncol(ratios.x)]) for 
@@ -88,7 +89,7 @@ function re_seed_bicluster_if_necessary( clust::bicluster )
         elseif length(clust.rows) > max_rows
             ##clust.rows = unique([Distributions.sample([1:length(counts_g)], counts_g) for i=1:max_rows]) ## remove some genes, include mostly from genes in few clusters
             ##clust.rows = unique( my_sampler( [1:length(counts_g)], max_rows, counts_g ) ) ## remove some genes, include mostly from genes in few clusters
-            counts_g = ( counts_g + 0.01 ) / ( max(counts_g) + 0.01 )
+            counts_g = ( counts_g + 0.01 ) / ( maximum(counts_g) + 0.01 )
             tmp_rows = unique( my_sampler( clust.rows, length(clust.rows)-max_rows+1, counts_g[clust.rows] ) ) ## remove some genes, mostly that are in lots of clusters
             ##println("REMOVING: ",tmp_rows," ",get_cluster_row_counts(clusters)[tmp_rows])
             clust.rows = clust.rows[ ! in(clust.rows, tmp_rows) ]
@@ -303,11 +304,11 @@ function clusters_w_func( func::ASCIIString, clusters, n_best=1 )
     global anno, ratios
     inds = findn([ismatch(Regex(func),anno["desc"][i]) for i=1:size(anno,1)] .== true)
     r_rownames = rownames(ratios)
-    inds2 = int32([contains(r_rownames, anno["sysName"][i]) ? 
+    inds2 = int32([in(r_rownames, anno["sysName"][i]) ? 
                    findn(r_rownames .== anno["sysName"][i])[1] : 0 for i=inds])
     inds2 = inds2[ inds2 .!= 0 ]
 
-    ord = order( int64([length(findin(clusters[k].rows,int64(inds2))) for k=1:length(clusters)]) )
+    ord = sortperm( int64([length(findin(clusters[k].rows,int64(inds2))) for k=1:length(clusters)]) )
     kInds = ord[ (end-n_best+1):end ] ## The n_best clusters w/ the most genes annotated with "flagell"
     ##kInd = findmax(int64([length(findin(clusters[k].rows,int64(inds2))) for k=1:length(clusters)]))[ 2 ]  
     
@@ -343,27 +344,27 @@ function print_cluster_stats( clusters::Dict{Int64,bicluster} )
                          "c0" => weight_c, "v0" => weight_v } )
     tmp = float32([length(clusters[k].rows) for k=1:k_clust])
     out_df["ROWS"] = nanmean(tmp)
-    println( "ROWS: ", out_df["ROWS"], " +/- ", nansd(tmp) )
+    println( "ROWS: ", out_df["ROWS"][1], " +/- ", nansd(tmp) )
     tmp = float32([length(clusters[k].cols) for k=1:k_clust])
     out_df["COLS"] = nanmean(tmp)
-    println( "COLS: ", out_df["COLS"], " +/- ", nansd(tmp) )
+    println( "COLS: ", out_df["COLS"][1], " +/- ", nansd(tmp) )
     tmp = float32([clusters[k].resid for k=1:k_clust])
     out_df["RESID"] = nanmean(tmp)
-    println( "MEAN RESID: ", out_df["RESID"], " +/- ", nansd(tmp) )
+    println( "MEAN RESID: ", out_df["RESID"][1], " +/- ", nansd(tmp) )
     tmp = float32([clusters[k].dens_string for k=1:k_clust])
     out_df["STRING_DENS"] = nanmean(tmp)
-    println( "MEAN STRING DENS: ", out_df["STRING_DENS"], " +/- ", nansd(tmp) )
+    println( "MEAN STRING DENS: ", out_df["STRING_DENS"][1], " +/- ", nansd(tmp) )
     tmp = float32([clusters[k].meanp_meme for k=1:k_clust])
     out_df["MEME_PVAL"] = nanmean(tmp)
-    println( "MEAN MEME LOG10(P-VAL): ", out_df["MEME_PVAL"], " +/- ", nansd(tmp) )
+    println( "MEAN MEME LOG10(P-VAL): ", out_df["MEME_PVAL"][1], " +/- ", nansd(tmp) )
     rows = 0; for k in 1:k_clust rows = [rows, clusters[k].rows]; end
     tmp = float32(collect(values(table(rows))))
     out_df["CLUSTS_PER_ROW"] = nanmean(tmp)
-    println( "CLUSTS PER ROW: ", out_df["CLUSTS_PER_ROW"], " +/- ", nansd(tmp) )
+    println( "CLUSTS PER ROW: ", out_df["CLUSTS_PER_ROW"][1], " +/- ", nansd(tmp) )
     cols = 0; for k in 1:k_clust cols = [cols, clusters[k].cols]; end
     tmp = float32(collect(values(table(cols))))
     out_df["CLUSTS_PER_COL"] = nanmean(tmp)
-    println( "CLUSTS PER COL: ", out_df["CLUSTS_PER_COL"], " +/- ", nansd(tmp) )
+    println( "CLUSTS PER COL: ", out_df["CLUSTS_PER_COL"][1], " +/- ", nansd(tmp) )
     out_df
 end
 

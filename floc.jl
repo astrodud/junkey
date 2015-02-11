@@ -90,28 +90,28 @@ function get_floc_scores_all(clusters::Dict{Int64,bicluster}, max_row::Int64=999
     tmp1 = sdize_vector( tmp1 ) .* weight_c
     scoresDF_c["combined"] = tmp1
 
-    if max_row <= max(scoresDF_r["row_col_ind"])
+    if max_row <= maximum(scoresDF_r["row_col_ind"])
         tmp_r = groupby( scoresDF_r, "k" )
         shrunk_r = Array(DataFrame, length(tmp_r))
         for i in 1:length(tmp_r) 
-            ord = order( tmp_r[i]["combined"] )[1:max_row]
+            ord = sortperm( tmp_r[i]["combined"] )[1:max_row]
             shrunk_r[i] = tmp_r[i][ ord, : ]
         end
         scoresDF_r = rbind( shrunk_r )
     end
 
-    if max_row <= max(scoresDF_r["row_col_ind"])
+    if max_row <= maximum(scoresDF_r["row_col_ind"])
         tmp_c = groupby( scoresDF_c, "k" )
         shrunk_c = Array(DataFrame, length(tmp_c))
         for i in 1:length(tmp_c) 
-            ord = order( tmp_c[i]["combined"] )[1:max_col]
+            ord = sortperm( tmp_c[i]["combined"] )[1:max_col]
             shrunk_c[i] = tmp_c[i][ ord, : ]
         end
         scoresDF_c = rbind( shrunk_c )
     end
 
     scores = vcat(scoresDF_r, scoresDF_c)
-    ##println(scores)
+    #println(scores)
     #write_table("output/$(organism)_scores.tsv",scores) 
     scores
 end
@@ -128,7 +128,7 @@ function get_floc_scores_best( scores::DataFrame, n_best_row::Int64=3, n_best_co
             tmp2 = tmp[r] ##sub( tmp[r], :(row_col_ind .== row_col_ind[1]) )
             if n_best_row == 1 ord = findmin( tmp2["combined"] )[2]
             elseif n_best_row >= size(tmp2, 1) ord = 1:size(tmp2, 1)
-            else ord = order( tmp2["combined"] )[ 1:n_best_row ]
+            else ord = sortperm( tmp2["combined"] )[ 1:n_best_row ]
             end
             dfs_r[r] = tmp2[ ord, : ]
         end
@@ -142,7 +142,7 @@ function get_floc_scores_best( scores::DataFrame, n_best_row::Int64=3, n_best_co
             tmp2 = tmp[c] ##sub( tmp[c], :(row_col_ind .== $c) )
             if n_best_col == 1 ord = findmin( tmp2["combined"] )[2]
             elseif n_best_col >= size(tmp2, 1) ord = 1:size(tmp2, 1)
-            else ord = order( tmp2["combined"] )[ 1:n_best_col ]
+            else ord = sortperm( tmp2["combined"] )[ 1:n_best_col ]
             end
             dfs_c[c] = tmp2[ ord,: ]
         end
@@ -196,7 +196,7 @@ function floc_update(clusters::Dict{Int64,bicluster}, max_no_improvements=25)
     ## Note this is wrong right now - it sorts ALL k scores for each row/col. 
     ##  Need to just use the BEST score for each row/col and then bubblesort these.
     ord::Vector{Int32} = rnd_bubblesort(convert(Vector{Float32}, scores2["combined"])) ##, n_sort_iter) 
-    #println( head(scores2[ord,:]), "\n", tail(scores2[ord,:]) )
+    println( head(scores2[ord,:]), "\n", tail(scores2[ord,:]) )
 
     new_clusters = saved_clusters = copy_clusters( clusters, true, false ); ## make a copy for updating
     (weight_r, weight_n, weight_m, weight_c, weight_v, weight_g) = get_score_weights() ## DONE: don't need to update n or m scores if their weights are 0

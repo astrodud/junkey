@@ -1,12 +1,16 @@
 ########## UTILITY FUNCTIONS ################################################################################
 
+## TODO: use HDF5 and JLD to save data (and possibly to use filehash-like feature... see 
+##  https://groups.google.com/forum/?fromgroups=#!topic/julia-users/6Kq20HHgOYY and https://github.com/timholy/HDF5.jl
+##  (NOTE saving via JLD doesn't work right for my data types yet)
+
 function save_jld(fname, tuple)
     io = GZip.gzopen(fname, "w") ## I get an error right now using gzopen
     try
         serialize(io,tuple) ## doesn't work with gzopen for an array of biclusters so...
     catch
         close(io)
-        if ends_with(fname, "jldz") ## serialize it uncompressed and then gzip it.
+        if endswith(fname, "jldz") ## serialize it uncompressed and then gzip it.
             fname = fname[ 1:(end-1) ]
             io = open(fname, "w")
             serialize(io, tuple)
@@ -25,7 +29,7 @@ function load_jld(fname)
     out
 end
 
-source = load ## I keep getting hitched up with this so create an alias
+source = require ## load ## I keep getting hitched up with this so create an alias
 
 const NA = float32( 0 / 0 )
 
@@ -110,6 +114,7 @@ end
 #     out
 # end
 
+import Base.in
 function in{T}(a::Array{T}, b::Array{T})  ## in(a,b) same as a%in%b in R
     out = falses(length(a))
     for i = 1:length(a)
@@ -294,4 +299,18 @@ function my_sampler( x::Vector, n, probs::Vector )
         ##println(tmp_row," ",x[tmp_row]," ",ind)
     end
     out_rows
+end
+
+
+## TODO: use pfork from PTools package -- need to write the equiv of a pmap() function.
+## "vals" is an input Vector or Dict or otherwise iterable
+
+function pfmap_inner( ind, v, np, f::Function, args... )
+    inds = find( mod( [0:(length(v)-1)], np ) .== ind-1 )
+    out = [ f(v[ii], args...) for ii=inds ]
+    out
+end
+
+function pfmap( vals, nprocs, f::Function, args... )
+    tmp = pfork( nprocs, pfmap_inner, vals, nprocs, f, args... )
 end

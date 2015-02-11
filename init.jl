@@ -11,7 +11,9 @@ function load_ratios(rats_file)
     x=readdlm(rats_file,'\t',ASCIIString)
     x_rnames=vec(x[2:end,1])
     x_cnames=vec(x[1,2:end])
-    x=readdlm(rats_file,'\t',Float32)[2:end,2:end]
+    x=readdlm(rats_file,'\t',skipstart=1)[:,2:end]
+    x[x.=="NA"] = NaN
+    x = float(x)
     println(size(x))
 
 ## Examples for Eco:
@@ -20,7 +22,7 @@ function load_ratios(rats_file)
 ## tar -xvzf taxdump.tar.gz names.dmp
 ## wget -O genomeInfo.511145.tsv 'http://www.microbesonline.org/cgi-bin/genomeInfo.cgi?tId=511145;export=tab'
 ## wget -O genome.511145.txt 'http://microbesonline.org/cgi-bin/genomeInfo.cgi?tId=511145;export=genome'
-## wget -O STRING_511145.tsv.gz 'http://baliga.systemsbiology.net/junkey/data/STRING/511145_STRING.tsv.gz'; gunzip STRING_511145.tsv.gz
+## wget -O STRING_511145.tsv.gz 'http://baliga.systemsbiology.net/data/STRING/511145_STRING.tsv.gz'; gunzip STRING_511145.tsv.gz
 ## NOTE: extract first 200 columns from a file using cut:
 ##    gunzip -c TanayMSB_GEData.txt.gz | cut -f1-200 | more
 
@@ -43,28 +45,29 @@ end
 
 function load_genome(organism)
     ## DONE: allow for multiple genome seqs (e.g. Halo, Sce)
-    org_files = system(`ls junkey/$organism/`)
-    genome_file = org_files[ findfirst( [ begins_with(i,"genome.") for i=org_files ] ) ]
-    genome_seqs = readFastaDNA( "./junkey/$organism/$genome_file" );
+    org_files = system(`ls ./$organism/`)
+    genome_file = org_files[ findfirst( [ beginswith(i,"genome.") for i=org_files ] ) ]
+    genome_seqs = readFastaDNA( "./$organism/$genome_file" );
     println(size(genome_seqs))
     genome_seqs
 end
 
 function load_annos(organism)
     ## Load the gene annotations
-    org_files = system(`ls junkey/$organism/`)
-    genomeInfo_file = org_files[ findfirst( [ begins_with(i,"genomeInfo.") for i=org_files ] ) ]
-    df = DataFrames.readtable( "./junkey/$organism/$genomeInfo_file", separator='\t' )
-    #io = open("./junkey/$organism/$genomeInfo_file", "r")
+    org_files = system(`ls ./$organism/`)
+    genomeInfo_file = org_files[ findfirst( [ beginswith(i,"genomeInfo.") for i=org_files ] ) ]
+    ## Note current version of readtable() specifically parses '+' and '-' as integers (see bytestoint() in io.jl)
+    df = DataFrames.readtable( "./$organism/$genomeInfo_file", separator='\t' )
+    #io = open("./$organism/$genomeInfo_file", "r")
     #df = DataFrames.read_table( io, '\t', DataFrames.DEFAULT_QUOTATION_CHARACTER, DataFrames.DEFAULT_MISSINGNESS_INDICATORS, true,
     #                       DataFrames.determine_column_names(io, '\t', DataFrames.DEFAULT_QUOTATION_CHARACTER, true ),
-    #                       DataFrames.determine_nrows( "./junkey/$organism/$genomeInfo_file", true ) ) ## pain in the ass but it works
+    #                       DataFrames.determine_nrows( "./$organism/$genomeInfo_file", true ) ) ## pain in the ass but it works
     #close( io )
     for i=find([typeof(df[i]) for i=1:size(df,2)].==DataArray{UTF8String,1})
         df[i] = DataArray( convert( Vector{ASCIIString}, df[ i ].data ) )
     end
     anno = df
-#     anno = readdlm("./junkey/$organism/$genomeInfo_file", '\t', Any) ##ASCIIString)
+#     anno = readdlm("./$organism/$genomeInfo_file", '\t', Any) ##ASCIIString)
 #     anno = NamedMatrix{Any}( anno[2:end,2:end], 
 #                             Base.convert(Array{ASCIIString,1},vec(anno[2:end,8])), 
 #                             Base.convert(Array{ASCIIString,1},vec(anno[1,2:end])) )
@@ -84,16 +87,16 @@ end
 
 function load_string_net(organism)
     ## Load the string network
-    org_files = system(`ls junkey/$organism/`)
-    string_file = org_files[ findfirst( [ begins_with(i,"STRING") for i=org_files ] ) ]
-    ##df = readdlm("./junkey/$organism/$string_file", '\t')
-    df = DataFrames.readtable( "./junkey/$organism/$string_file", separator='\t', header=false )
-    #io = open("./junkey/$organism/$string_file", "r")
+    org_files = system(`ls ./$organism/`)
+    string_file = org_files[ findfirst( [ beginswith(i,"STRING") for i=org_files ] ) ]
+    ##df = readdlm("./$organism/$string_file", '\t')
+    df = DataFrames.readtable( "./$organism/$string_file", separator='\t', header=false )
+    #io = open("./$organism/$string_file", "r")
     #has_header = false
     #df = DataFrames.read_table( io, '\t', DataFrames.DEFAULT_QUOTATION_CHARACTER, DataFrames.DEFAULT_MISSINGNESS_INDICATORS, 
     #                           has_header,
     #                       DataFrames.determine_column_names(io, '\t', DataFrames.DEFAULT_QUOTATION_CHARACTER, has_header ),
-    #                       DataFrames.determine_nrows( "./junkey/$organism/$string_file", has_header ) ) ## pain in the ass but it works
+    #                       DataFrames.determine_nrows( "./$organism/$string_file", has_header ) ) ## pain in the ass but it works
     #close( io )
     # df[1] = [ split( df[ i, 1 ], '.' )[ 2 ] for i=1:size( df, 1 ) ]
     # df[2] = [ split( df[ i, 2 ], '.' )[ 2 ] for i=1:size( df, 1 ) ]
@@ -101,7 +104,7 @@ function load_string_net(organism)
     #     df = df[[1,2,15]]
     #     df[3] = [ float32( replace( split( df[ i, 3 ], '|' )[ 1 ], "score:", "" ) ) for i=1:size( df, 1 ) ]
     # end
-    df[3] = df[3] / float32(max(df[3]))
+    df[3] = df[3] / float32(maximum(df[3]))
     df[1] = PooledDataArray( convert(Vector{ASCIIString}, df[1].data) ) ## use PooledDataArray to use less memory; doesn't seem to slow it down
     df[2] = PooledDataArray( convert(Vector{ASCIIString}, df[2].data) )
     string_net = df
@@ -129,31 +132,17 @@ end
 function load_op_table(organism)
     ## Now, require the operons table!
     ## DONE? (need to verify): Allow for no operons table (e.g. yeast)
-    org_files = system(`ls junkey/$organism/`)
-    op_file = findfirst( [ begins_with(i,"microbesonline_operons_") for i=org_files ] )
+    org_files = system(`ls ./$organism/`)
+    op_file = findfirst( [ beginswith(i,"microbesonline_operons_") for i=org_files ] )
     op_table::DataFrame = DataFrame()
-    if op_file > 0 ##filesize("./junkey/$organism/$op_file") > 0   ## eukaryotes - no op_file exists!
+    if op_file > 0 ##filesize("./$organism/$op_file") > 0   ## eukaryotes - no op_file exists!
         op_file = org_files[ op_file ]
-        df = DataFrames.readtable( "./junkey/$organism/$op_file", separator='\t' )
-        #io = open("./junkey/$organism/$op_file", "r")
-        #has_header = true
-        #df = DataFrames.read_table( io, '\t', DataFrames.DEFAULT_QUOTATION_CHARACTER, DataFrames.DEFAULT_MISSINGNESS_INDICATORS, has_header,
-        #                           DataFrames.determine_column_names(io, '\t', DataFrames.DEFAULT_QUOTATION_CHARACTER, has_header ),
-        #                           DataFrames.determine_nrows( "./junkey/$organism/$op_file", has_header ) ) ## pain in the ass but it works
-        #close( io )
-        df = df[ [ "SysName1", "SysName2", "bOp", "pOp" ] ] ##3, 4, 7, 8 ] ];
-        df[ "SysName1" ] = DataArray( convert( Vector{ASCIIString}, df[ "SysName1" ].data ) )
-        df[ "SysName2" ] = DataArray( convert( Vector{ASCIIString}, df[ "SysName2" ].data ) )
-        df[ "pOp" ] = DataArray( convert( Vector{Float32}, df[ "pOp" ].data ) )
+        df = DataFrames.readtable( "./$organism/$op_file", separator='\t' )
+        df = df[ [ :SysName1, :SysName2, :bOp, :pOp ] ] ##3, 4, 7, 8 ] ];
+        df[ :SysName1 ] = DataArray( convert( Vector{ASCIIString}, df[ :SysName1 ].data ) )
+        df[ :SysName2 ] = DataArray( convert( Vector{ASCIIString}, df[ :SysName2 ].data ) )
+        df[ :pOp ] = DataArray( convert( Vector{Float32}, df[ :pOp ].data ) )
         op_table = df
-        #     op_table = readdlm("./junkey/$organism/$op_file", '\t' )[ :, [ 3, 4, 7, 8 ] ];
-        #     tmp_c = vec(op_table[ 1,: ])
-        #     tmp_r = vec(op_table[ :,1 ]); tmp_r = tmp_r[ 2:end ]
-        #     op_table = NamedMatrix{Any}( op_table[ 2:end,: ], 
-        #                                 Base.convert(Array{ASCIIString,1},tmp_r), 
-        #                                 Base.convert(Array{ASCIIString,1},tmp_c) )
-        #     op_table.x[ :,3 ] = op_table.x[ :,3 ] .== "TRUE"
-        #     op_table.x[ :,4 ] = float32( op_table.x[ :,4 ] )
     else
        warn( "NO OPERONS TABLE!" )
     end
@@ -163,21 +152,21 @@ end
 ## Load the junkey code as text so it can be stored in the run results
 function load_junkey_code(path)
     files = system(`ls $path/`)
-    files = files[ [ ends_with( f, ".jl" ) for f in files ] ]
+    files = files[ [ endswith( f, ".jl" ) for f in files ] ]
     files = files[ files .!= "nanopond-1.9C.jl" ]
-    code = { f => readall( "junkey/$f" ) for f in files }
+    code = { f => readall( "./$f" ) for f in files }
     code
 end
 
-function junkey_init(organism, k_clust)
+function junkey_init(organism, k_clust, force=true)
     global ratios_file, ratios, distance_scan, distance_search
     println(organism)
 
     ## TODO: shouldn't store ratios, k_clust in this file; this is just organism/genome data
-    if filesize("junkey/$organism/data.jldz") > 0 ## 0 if not exist
-        warn( "Loading organism data from junkey/$organism/data.jldz" )
+    if ! force && filesize("./$organism/data.jldz") > 0 ## 0 if not exist
+        warn( "Loading organism data from ./$organism/data.jldz" )
         (organism, k_clust, ratios, genome_seqs, anno, op_table, string_net, 
-         allSeqs_fname, all_bgFreqs, all_genes) = load_jld("junkey/$organism/data.jldz"); ##, all_rows
+         allSeqs_fname, all_bgFreqs, all_genes) = load_jld("./$organism/data.jldz"); ##, all_rows
 
         ## Make sure we have written out the sequences file for MAST-ing
         if filesize(allSeqs_fname) <= 0 
@@ -192,24 +181,24 @@ function junkey_init(organism, k_clust)
     end 
 
     if ! isdefined(:ratios) ratios = load_ratios(ratios_file); end
-    genome_seqs = load_genome(organism)
-    anno = load_annos(organism)
-    string_net = load_string_net(organism)
-    op_table = load_op_table(organism)
+    genome_seqs = load_genome(organism);
+    anno = load_annos(organism);
+    string_net = load_string_net(organism);
+    op_table = load_op_table(organism);
 
     ## build up a list of all genes in the expr. data + in the annotations + in the string network
     all_genes = Dict{ASCIIString,Int64}()
     for i=keys(ratios.rnames) all_genes[i] = ratios.rnames[i]; end
     ##for i=keys(anno.rnames) if get( all_genes, i, 0 ) == 0 all_genes[i] = length(all_genes)+1; end; end
-    for i=anno["sysName"].data if get( all_genes, i, 0 ) == 0 all_genes[i] = length(all_genes)+1; end; end
+    for i=anno[:sysName].data if get( all_genes, i, 0 ) == 0 all_genes[i] = length(all_genes)+1; end; end
     for i=1:size(string_net,1)
         if get( all_genes, string_net[i,1], 0 ) == 0 all_genes[string_net[i,1]] = length(all_genes)+1; end
         if get( all_genes, string_net[i,2], 0 ) == 0 all_genes[string_net[i,2]] = length(all_genes)+1; end
     end
     ##for i=keys(op_table.rnames) if get( all_genes, i, 0 ) == 0 all_genes[i] = length(all_genes)+1; end; end
     if size(op_table,1) > 0
-        for i=op_table["SysName1"].data if get( all_genes, i, 0 ) == 0 all_genes[i] = length(all_genes)+1; end; end
-        for i=op_table["SysName2"].data if get( all_genes, i, 0 ) == 0 all_genes[i] = length(all_genes)+1; end; end
+        for i=op_table[:SysName1].data if get( all_genes, i, 0 ) == 0 all_genes[i] = length(all_genes)+1; end; end
+        for i=op_table[:SysName2].data if get( all_genes, i, 0 ) == 0 all_genes[i] = length(all_genes)+1; end; end
     end
     println(length(all_genes))
 
@@ -222,24 +211,22 @@ function junkey_init(organism, k_clust)
     ## TODO: Need to add 0's for k-mers that are NOT in the sequences.
     ##   Use generate_all_kmers() for that.
     ## TODO: Need to include vague IUPAC symbols better
-    all_seqs = get_sequences(anno["sysName"].data,anno,genome_seqs,true,op_table,distance_search,false); 
-    all_seqs = all_seqs[ find(all_seqs[:,1].!=""), : ] 
-    all_seqs = filter_sequences( all_seqs, distance_search )
 
-    all_seqs_scan = get_sequences(anno["sysName"].data,anno,genome_seqs,true,op_table,distance_scan,false); 
+    all_seqs_scan = get_sequences(anno[:sysName].data,anno,genome_seqs,true,op_table,distance_scan,false); 
     all_seqs_scan = all_seqs_scan[ find(all_seqs_scan[:,1].!=""), : ]
     all_seqs_scan = filter_sequences( all_seqs_scan, distance_scan )
 
-    allSeqs_fname = "junkey/$(organism)/allSeqs.fst"
+    allSeqs_fname = "./$(organism)/allSeqs.fst"
     writeFasta( all_seqs_scan, allSeqs_fname ) ## NOTE all_seqs_scan are not used from here on
     
     ##bgCounts = getBgCounts( [genome_seqs,revComp(genome_seqs)], [0:5], true );
     ##bgFreqs = getBgFreqs( bgCounts ); ## TODO: bgFreqs are currently not used in MEME-ing OR MAST-ing.
 
-    all_bgCounts = getBgCounts( all_seqs["seq"].data );
+    ## TODO: remove 'N's from k-mers in counts
+    all_bgCounts = getBgCounts( all_seqs_scan[:seq].data );
     all_bgFreqs = getBgFreqs( all_bgCounts );  ## TODO: bgFreqs are currently not used in MEME-ing OR MAST-ing.
 
-    save_jld( "junkey/$organism/data.jldz", (organism, k_clust, ratios, genome_seqs, anno, op_table, string_net, 
+    save_jld( "./$organism/data.jldz", (organism, k_clust, ratios, genome_seqs, anno, op_table, string_net, 
                                           allSeqs_fname, all_bgFreqs, all_genes) ) ##, all_rows
     
     (ratios, genome_seqs, anno, op_table, string_net, ##all_seqs, all_seqs_scan, 
@@ -288,8 +275,8 @@ end
 
 function get_regex( strings::Vector{ASCIIString}, min_ignore::Int=2 )
     nchar=int32([length(strings[i]) for i=1:length(strings)])
-    out::ASCIIString = ""
-    for i=1:max(nchar)
+    out = ""
+    for i=1:maximum(nchar)
         d = Dict{Char,Int64}()
         for j=1:length(strings)
             if i > nchar[j] continue; end
@@ -297,11 +284,11 @@ function get_regex( strings::Vector{ASCIIString}, min_ignore::Int=2 )
 	    d[c] = get(d,c,0) + 1
         end
         if isempty(d) break; end
-        tmp::ASCIIString = ""
-        for c::Char=keys(d) if get(d,c,0) > min_ignore tmp = strcat(tmp,c); end; end ## ignore values with <=2 occurences
+        tmp = ""
+        for c::Char=collect(keys(d)) if get(d,c,0) > min_ignore tmp = "$tmp$c"; end; end ## ignore values with <=2 occurences
         if length(tmp) > 1 tmp = "[$tmp]"; end
-        if sum(values(d)) < length(strings) * 0.95 tmp = "$tmp?"; end
-        out = strcat(out,tmp)##"$out$tmp"
+        if sum(collect(values(d))) < length(strings) * 0.95 tmp = "$tmp?"; end
+        if tmp != "" out = "$out$tmp"; end
     end
     out
 end

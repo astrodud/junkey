@@ -82,7 +82,7 @@ function rownames{T<:NamedMatrix}( x::T ) ## Could be faster but this is easy as
         keyz[i+=1] = k 
         valz[i] = v
     end
-    keyz[order(valz)]
+    keyz[sortperm(valz)]
 end
 
 function colnames{T<:NamedMatrix}( x::T ) ## Could be faster but this is easy as long as its not called too often
@@ -97,5 +97,5 @@ function colnames{T<:NamedMatrix}( x::T ) ## Could be faster but this is easy as
         keyz[i+=1] = k 
         valz[i] = v
     end
-    keyz[order(valz)]
+    keyz[sortperm(valz)]
 end

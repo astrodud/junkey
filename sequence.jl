@@ -9,7 +9,8 @@
 #get_sequences( genes::Vector{ASCIIString} ) = get_sequences( genes, true, distance_search )
 
 ## This version of the function only works after anno/genome_seq/op_table have been set to a global var.
-function get_sequences( genes::Vector{ASCIIString}, op_shift=true, distance::Vector{Int64}=distance_search, debug::Bool=false )
+function get_sequences( genes::Vector{ASCIIString}, op_shift::Bool=true, distance::Vector{Int64}=distance_search, 
+debug::Bool=false )
     global anno, genome_seqs, op_table;
     get_sequences( genes, anno, genome_seqs, op_shift, op_table, distance, debug )
 end
@@ -21,44 +22,44 @@ function get_sequences( genes::Vector{ASCIIString}, anno::DataFrame, genome_seqs
     ind = 0
     for gene=genes
         #println(gene," ",distance)
-        anno_ind = findfirst( anno["sysName"].data, gene )
+        anno_ind = findfirst( anno[:sysName].data, gene )
         upstream_gene = gene
         if anno_ind == 0 ##! any(anno["sysName"].data .== gene) 
             ##seqs[ ind += 1,: ] = [gene, upstream_gene, ""]
-            seqs[ ind += 1 ] = DataFrame( {"gene"=>[gene], "upstream_gene"=>[upstream_gene], "seq"=>[""]} )
+            seqs[ ind += 1 ] = DataFrame( gene=[gene], upstream_gene=[upstream_gene], seq=[""] )
             continue
         end
         if op_shift && size(op_table,1) > 0
-            strand = anno["strand"][ anno_ind ] ##findin(anno["sysName"].data, gene)[1] ]  ##anno["sysName"].data.==gene,"strand"][1]
-            upLabel = strand == '+' ? "SysName1" : "SysName2"
-            currLabel = strand == '+' ? "SysName2" : "SysName1"
-            row = findfirst( op_table[ currLabel ], gene ) ##find( op_table[ currLabel ] .== gene )
-            while row > 0 && op_table[ row, "pOp" ] >= 0.8
-                upstream_gene = op_table[ row, upLabel ]
+            strand = anno[:strand][ anno_ind ] ##findin(anno["sysName"].data, gene)[1] ]  ##anno["sysName"].data.==gene,"strand"][1]
+            upLabel = strand == "+" ? "SysName1" : "SysName2"
+            currLabel = strand == "+" ? "SysName2" : "SysName1"
+            row = findfirst( op_table[ symbol(currLabel) ], gene ) ##find( op_table[ currLabel ] .== gene )
+            while row > 0 && op_table[ row, :pOp ] >= 0.8
+                upstream_gene = op_table[ row, symbol(upLabel) ]
                 ##println(gene," ",row," ",upstream_gene," ",op_table[ row[1], "pOp" ])
-                row = findfirst( op_table[ currLabel ], upstream_gene ) ##find( op_table[ currLabel ] .== upstream_gene )
+                row = findfirst( op_table[ symbol(currLabel) ], upstream_gene ) ##find( op_table[ currLabel ] .== upstream_gene )
             end 
         end
-        tmp_ind = findfirst( anno["sysName"].data, upstream_gene )
-        strnd = anno[ "strand" ][ tmp_ind ] ##anno[ anno["sysName"].data.==upstream_gene, "strand" ][1]
-        strt = anno[ "start" ][ tmp_ind ] ##anno[ anno["sysName"].data.==upstream_gene, "start" ][1]
-        rng = strnd == '+' ? strt + distance : strt - reverse(distance)
-        genome_seq = get_genome_seq( genome_seqs, anno[ "scaffoldId" ][ tmp_ind ] )
+        tmp_ind = findfirst( anno[:sysName].data, upstream_gene )
+        strnd = anno[ :strand ][ tmp_ind ] ##anno[ anno["sysName"].data.==upstream_gene, "strand" ][1]
+        strt = anno[ :start ][ tmp_ind ] ##anno[ anno["sysName"].data.==upstream_gene, "start" ][1]
+        rng = strnd == "+" ? strt + distance : strt - reverse(distance)
+        genome_seq = get_genome_seq( genome_seqs, anno[ :scaffoldId ][ tmp_ind ] )
         if rng[2] > length(genome_seq) rng[2] = length(genome_seq); end
         seq = genome_seq[ rng[1]:rng[2] ]
-        if debug println( "$gene $upstream_gene $strnd $strt" ); end
+        if debug println( "$gene $upstream_gene $strnd $strt $rng" ); end
         ##println("$gene $upstream_gene $strnd $strt $rng $seq")
-        if strnd == '-' seq = revComp(seq); end
+        if strnd == "-" seq = revComp(seq); end
         ##seqs[ ind+=1,: ] = [gene, upstream_gene, seq]
-        seqs[ ind+=1 ] = DataFrame( {"gene"=>[gene], "upstream_gene"=>[upstream_gene], "seq"=>[seq]} )
+        seqs[ ind+=1 ] = DataFrame( gene=[gene], upstream_gene=[upstream_gene], seq=[seq] )
     end
     ##seqs
-    out = rbind(seqs)
+    out = vcat(seqs)
     out
 end
 
 function filter_sequences( seqs::DataFrame, distance=distance_search, remove_repeats=true, remove_atgs=true )
-    seqs = seqs[ seqs["seq"] .!= "", : ] ## remove all empty sequences; they cause heartburn.
+    seqs = seqs[ seqs[:seq] .!= "", : ] ## remove all empty sequences; they cause heartburn.
 
     if remove_repeats == true ##&& length( grep( "NNNNNN", seqs ) ) <= 1
        ##if verbose println( "Removing low-complexity regions from sequences.\n" ); end
@@ -73,8 +74,8 @@ function filter_sequences( seqs::DataFrame, distance=distance_search, remove_rep
        rm( fname )
        if size(seqs,1) != size(seqs_new,1) 
            warn( "Remove low complexity failed - skipping!" )
-       elseif all(seqs["gene"] .== seqs_new["gene"])
-           seqs_new["upstream_gene"] = seqs["upstream_gene"]
+       elseif all(seqs[:gene] .== seqs_new[:gene])
+           seqs_new[:upstream_gene] = seqs[:upstream_gene]
            seqs = seqs_new
        end
     end
@@ -82,9 +83,9 @@ function filter_sequences( seqs::DataFrame, distance=distance_search, remove_rep
     if remove_atgs && any( distance .< 0 ) 
         nnnn = convert(Vector{Uint8}, "NNNN")
         for i in 1:size(seqs,1)
-            ss = convert(Vector{Uint8}, seqs["seq"][i])
+            ss = convert(Vector{Uint8}, seqs[:seq][i])
             ss[ (distance[2]+1):(distance[2]+4) ] = nnnn  ## Mask out ATGs (why 4 instead of 3?)
-            seqs["seq"][i] = convert(ASCIIString, ss)
+            seqs[:seq][i] = convert(ASCIIString, ss)
         end
     end
 
@@ -93,8 +94,8 @@ end
 
 function get_genome_seq( genome_seqs::DataFrame, scaffoldId::Int64 )
     sid = "$scaffoldId"
-    ind = find( [begins_with(genome_seqs["gene"].data[i], sid) for i=1:size(genome_seqs,1)] )[ 1 ]
-    genome_seqs[ "seq" ].data[ ind ]
+    ind = find( [beginswith(genome_seqs[:gene].data[i], sid) for i=1:size(genome_seqs,1)] )[ 1 ]
+    genome_seqs[ :seq ].data[ ind ]
 end
 
 ## Create DataFrame for multiple sequences; same format as get_sequences(bicluster)
@@ -107,15 +108,15 @@ function readFastaDNA( fname )
     seq_names = convert( Vector{ASCIIString}, [seqs[i][1:(first_return[i-1]-1)] for i=2:length(seqs)] ); 
     seqs = [seqs[i][(first_return[i-1]+1):end] for i=2:length(seqs)];
     seqs = convert( Vector{ASCIIString}, [uppercase( replace( replace( seqs[i], r">.*\n", "" ), '\n', "" ) ) for i=1:length(seqs)] );
-    out = DataFrame( {"gene"=>seq_names, "upstream_gene"=>fill("", length(seqs)), "seq"=>seqs} );
+    out = DataFrame( gene = seq_names, upstream_gene = fill("", length(seqs)), seq = seqs );
     out
 end
 
 function writeFasta( seqs, fname ) ## Assumes seqs in DataFrame format of get_sequences()
     str = open( fname, "w" )
     for i=1:size(seqs,1)
-        gene = seqs["gene"].data[i]
-        seq = seqs["seq"].data[i]
+        gene = seqs[:gene].data[i]
+        seq = seqs[:seq].data[i]
         write( str, ">$gene\n" )
         write( str, "$seq\n" )
     end
@@ -137,7 +138,7 @@ const DNA_letters = [ 'G', 'A', 'T', 'C' ];
 const DNA_letter_lookup = {'G'=>1, 'A'=>2, 'T'=>3, 'C'=>4 };
 
 function read_iupac()
-    fname = "./junkey/IUPAC-dna.txt"
+    fname = "./IUPAC-dna.txt"
     str = open( fname )
     lines = split( readall( str ), '\n' )
     close( str )
@@ -197,7 +198,7 @@ function getBgFreqs( bgCounts::Dict{ASCIIString,Int64} )
     k = collect(keys( bgCounts ))
     nc = [ length(k[i]) for i=1:length(k) ]
     d = Dict{ASCIIString,Float64}()
-    for i=1:max(nc)
+    for i=1:maximum(nc)
         ks = k[find(nc.==i)]
         tot = sum( [bgCounts[j] for j=ks] )
         for j=ks d[j] = bgCounts[j] / tot; end
@@ -244,8 +245,8 @@ if false
     close(Astream)
 
     ## try this! file-based, don't even have to read it in!
-    len = filesize("junkey/Hpy/genome.85962.txt")
-    seqStream = open("junkey/Hpy/genome.85962.txt", "r")
+    len = filesize("Hpy/genome.85962.txt")
+    seqStream = open("Hpy/genome.85962.txt", "r")
     seq = mmap_array(Nucleotide, (len,), seqStream)
     println(convert(ASCIIString,seq[500:505]))
 end

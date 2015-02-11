@@ -1,5 +1,6 @@
 ## TODO: use pfork from PTools package -- need to write the equiv of a pmap() function.
 ## TODO: use named function arguments instead of all the multiply-defined funcs here
+## TODO: (NOTE saving doesn't work right for my data types yet): use HDF5 and JLD to save data (and possibly to use filehash-like feature... see https://groups.google.com/forum/?fromgroups=#!topic/julia-users/6Kq20HHgOYY and https://github.com/timholy/HDF5.jl
 
 ## MAIN PROGRAM
 
@@ -7,24 +8,27 @@ using Clustering ## only needed on head node so included here instead of in incl
 
 @everywhere begin ## This code will be loaded onto all nodes
 
-require( "./junkey/includes.jl" )
+require( "./includes.jl" )
 
 iter = 1
-require( "./junkey/params.jl" )
+require( "./params.jl" )
 
 end   ## @everywhere
 
 if myid() == 1 ## This stuff below should ONLY run on the head node
 
-(ratios, genome_seqs, anno, op_table, string_net, allSeqs_fname, all_bgFreqs, all_genes) = junkey_init(organism, k_clust);
+(ratios, genome_seqs, anno, op_table, string_net, allSeqs_fname, all_bgFreqs, all_genes) = \
+    junkey_init(organism, k_clust);
 
-reload( "./junkey/params.jl" ) ## include this again to set data-dependent defaults (e.g. k_clust=nrow(ratios)/10)
+reload( "./params.jl" ) ## include this again to set data-dependent defaults (e.g. k_clust=nrow(ratios)/10)
 
 if nprocs() > 1 pre_load_child_nodes(); end ## send ratios, string_net, k_clust, etc. over to children
 gc()
 
 ## Save junkey code for safe keeping
-junkey_code = load_junkey_code("junkey");
+junkey_code = load_junkey_code(".");
+
+##stop()
 
 startTime = time()
 clusters = init_biclusters( ratios, k_clust, "random" );
@@ -57,7 +61,7 @@ write_table("output/$(organism)_clusters.tsv", clusters_tab) ## for examination 
 
 tmp = get_cluster_row_counts(clusters);
 println( sum(tmp.==0), " genes in no clusters" )
-println( sum(tmp.==max(tmp)), " genes in ", max(tmp), " clusters" )
+println( sum(tmp.==maximum(tmp)), " genes in ", maximum(tmp), " clusters" )
 
 println( @sprintf( "%.3f", (endTime - startTime)/60 ), " minutes since initialization" )
 
