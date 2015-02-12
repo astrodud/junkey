@@ -107,8 +107,8 @@ function get_cluster_expr_rowcol_scores{T}( b::bicluster, x::NamedMatrix{T} ) ##
     const vr = bicluster_var( b, x )
     resid = bicluster_residue( b, x )
 
-    ##xx::Matrix{T} = x.x[:,cols] ## This uses less RAM than previous version; about same speed
-    xx::ArrayView{Float32,2,Array{Float32,2},(Array{Int64,1},Array{Int64,1})}=view(x.x,[1:size(x.x,1)],cols) ## This uses less RAM; perhaps a tiny bit slower
+    xx::Matrix{T} = x.x[:,cols] ## This uses less RAM than previous version; about same speed
+    ##xx::ArrayView{Float32,2,Array{Float32,2},(Array{Int64,1},Array{Int64,1})}=view(x.x,[1:size(x.x,1)],cols) ## This uses less RAM; perhaps a tiny bit slower
     mn::Vector{T} = colmeans(xx[rows,:])
     x2::Matrix{T} = similar(xx) ## Get the full matrix; subtract the mean biclust profile
     for i=1:size(x2,2) x2[:,i] = xx[:,i] - mn[i]; end
@@ -126,8 +126,8 @@ function get_cluster_expr_rowcol_scores{T}( b::bicluster, x::NamedMatrix{T} ) ##
        score_r[r] = ( newvr - vr ) #/ (vr+0.01) ##+ ( isIn ? v_factor : -v_factor )
     end
 
-    ##xx=x.x[rows,:]
-    xx=view(x.x,rows,[1:size(x.x,2)])
+    xx=x.x[rows,:]
+    ##xx=view(x.x,rows,[1:size(x.x,2)])
     mn=colmeans(xx)
     x2=similar(xx) ## Get the full matrix; subtract the mean biclust profile
     for i=1:size(x2,2) x2[:,i] = xx[:,i] - mn[i]; end
