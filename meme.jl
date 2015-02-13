@@ -78,7 +78,7 @@ end
 
 function re_meme_bicluster( k::Int64, seqs::DataFrame, ##Matrix{ASCIIString}, 
                            n_motifs::Int, allSeqs_fname::ASCIIString, verbose::Bool=false )
-    #@time gibbs_out = gibbs_site_sampler(seqs["seq"].data)     ## run gibbs sampler on most "flagellar-enriched" cluster
+    #@time gibbs_out = gibbs_site_sampler(seqs[:seq].data)     ## run gibbs sampler on most "flagellar-enriched" cluster
     #@time gibbs_out2 = gibbs_site_sampler(seqs, gibbs_out["pssm"])
 
     meme_out::Vector{ASCIIString} = []
@@ -107,8 +107,8 @@ end
 ## This is parallelizable because it sends the seqs to be searched to each node
 function do_meme(seqs::DataFrame, n_motifs::Int=2, verbose::Bool=false) 
     global iter, n_iter, motif_width_range
-    seqs = seqs[ seqs["seq"].data .!= "", : ]
-    seqs = seqs[ ! duplicated(seqs["seq"].data), : ]
+    seqs = seqs[ seqs[:seq].data .!= "", : ]
+    seqs = seqs[ ! duplicated(seqs[:seq].data), : ]
     if size(seqs,2) <= 2 return( "" ); end
 
     (seqs_fname,str) = mktemp()
@@ -138,7 +138,7 @@ function do_mast(memeOut, allSeqs_fname, get_allHitsTab=false, verbose=true)
     ## Not used right now but TODO: convert output to DataFrame (currently an Any array)
     if get_allHitsTab
         ## First get the table of sites (multiple hits per sequence) -- using "-hits_list"
-        cmd = `./progs/mast $memeOutFname -d $allSeqs_fname -nostatus -stdout -text -brief -ev 999999 -mev 999999 -mt 1.0 -seqp -remcorr -hit_list`
+        cmd = `./progs/mast $memeOutFname $allSeqs_fname -nostatus -stdout -text -brief -ev 999999 -mev 999999 -mt 1.0 -seqp -remcorr -hit_list`
         if verbose println(cmd); end
         mastOut = system(cmd)
 
@@ -167,7 +167,7 @@ function do_mast(memeOut, allSeqs_fname, get_allHitsTab=false, verbose=true)
 ## SEQUENCE NAME                      DESCRIPTION                   E-VALUE  LENGTH
 ## and last line is 2 lines above 
 ## ********************************************************************************
-    cmd = `./progs/mast $memeOutFname -d $allSeqs_fname -nostatus -stdout -text -brief -ev 999999 -mev 999999 -mt 0.99 -seqp -remcorr` #-b
+    cmd = `./progs/mast $memeOutFname $allSeqs_fname -nostatus -stdout -text -brief -ev 999999 -mev 999999 -mt 0.99 -seqp -remcorr` #-b
     if verbose println(cmd); end
     mastOut = system(cmd)
 

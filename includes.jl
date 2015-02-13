@@ -7,7 +7,7 @@ using GZip
 try
     include( "NamedMatrix.jl" ) ## catch it so the rest of this file can be require()-ed without an error
     include( "Bicluster.jl" )
-    include( "ArrayView.jl" )
+#    include( "ArrayView.jl" )
 catch x
     println( "Not re-loading types" )
     println( x )

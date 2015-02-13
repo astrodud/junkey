@@ -156,14 +156,14 @@ function get_cluster_network_row_scores( b::bicluster, network::DataFrame )
     ## Note that right now rows in the bicluster is the index into the rownames of the expression matrix!!! TODO: change this!
     r_rownames = rownames(ratios)
     rows = r_rownames[b.rows] ##keys( all_genes )[ in( values( all_genes ), b.rows ) ]
-    net = sub( network, findin( network["x1"], rows ) ) ## Assume network is symmetric!
-    grps = groupby( net, "x2" ) ## each group is a subnetwork with all genes in bicluster (x1) connected to a given gene
-    grpnames = convert( Vector{ASCIIString}, [ grps[i]["x2"][1] for i=1:length( grps ) ] ) ## the given gene for each group
+    net = sub( network, findin( network[:x1], rows ) ) ## Assume network is symmetric!
+    grps = groupby( net, :x2 ) ## each group is a subnetwork with all genes in bicluster (x1) connected to a given gene
+    grpnames = convert( Vector{ASCIIString}, [ grps[i][:x2][1] for i=1:length( grps ) ] ) ## the given gene for each group
     grpname_lookup = [ grpnames[i] => i for i=1:length(grps) ]
-    new_net = net2 = sub( net, findin( net["x2"], rows ) )   ## subnetwork just connecting between nodes in the bicluster
-    sum_weights = sum( new_net["x3"] )
+    new_net = net2 = sub( net, findin( net[:x2], rows ) )   ## subnetwork just connecting between nodes in the bicluster
+    sum_weights = sum( new_net[:x3] )
     dens = log10( sum_weights / length(rows)^2 + 1e-9 ) ## Already symmetrized, need to decrease count by 1/2
-    n2 = net2["x2"] ##Vector{ASCIIString} = net2[2]
+    n2 = net2[:x2] ##Vector{ASCIIString} = net2[2]
 
     score_n = b.scores_n
     if length(score_n) == 0 score_n = Array(Float32,size(ratios.x,1)); end    
@@ -173,11 +173,11 @@ function get_cluster_network_row_scores( b::bicluster, network::DataFrame )
         if isIn ## r is in the bicluster -- remove the node from the bicluster-only subnetwork and recalc the density
             newR = remove(rows,r)
             new_net = sub( net2, findin( n2, newR ) ) ##net2[2].data, newR ) ) )
-            new_dens = sum( new_net["x3"] ) / length(newR) / length(rows)
+            new_dens = sum( new_net[:x3] ) / length(newR) / length(rows)
         else
             try 
                 new_net = grps[ grpname_lookup[r] ]
-                new_dens = ( sum_weights + sum( new_net["x3"] ) ) / (length(rows)+1) / length(rows)
+                new_dens = ( sum_weights + sum( new_net[:x3] ) ) / (length(rows)+1) / length(rows)
             catch ## no subnetwork for this "r"; so use the bicluster's subnetwork, but diminished by increased length(newR)
                 new_dens = sum_weights / (length(rows)+1) / length(rows)
             end
@@ -206,20 +206,20 @@ function get_cluster_meme_row_scores( b::bicluster )
         b.meanp_meme = NA
         return( b )
     end
-    df = sub( b.mast_out, findin( b.mast_out["Gene"], genes ) )
+    df = sub( b.mast_out, findin( b.mast_out[:Gene], genes ) )
     #sz=size(df);#println("HERE MOT2 $sz")
-    mn::Float32 = nanmean( log10( df["P-value"].data ) )
+    mn::Float32 = nanmean( log10( df[:(P-value)].data ) )
     pvals::Dict{ASCIIString,Float32} = Dict{ASCIIString,Float32}()
-    for i in 1:size(b.mast_out,1) pvals[b.mast_out["Gene"].data[i]] = b.mast_out["P-value"].data[i]; end
-    not_there = r_rownames[ ! in(r_rownames, b.mast_out["Gene"].data) ]
+    for i in 1:size(b.mast_out,1) pvals[b.mast_out[:Gene].data[i]] = b.mast_out[:(P-value)].data[i]; end
+    not_there = r_rownames[ ! in(r_rownames, b.mast_out[:Gene].data) ]
     for r in not_there pvals[r] = NA; end
     for g in r_rownames ## Iterate over rows
        isIn = in(genes, g) ##any(rows .== r) ## r is in the bicluster
        newR = isIn ? remove(genes,g) : [genes,[g]]
        pvs = float32( [ pvals[r] for r in newR ] )
-       # pvs = df["P-value"].data
-       # if isIn pvs = sub( df, df["Gene"].data .!= g )["P-value"].data
-       # else    pvs = [ pvs, sub( b.mast_out, b.mast_out["Gene"].data .== g )["P-value"].data ]
+       # pvs = df[:(P-value)].data
+       # if isIn pvs = sub( df, df[:Gene].data .!= g )[:(P-value)].data
+       # else    pvs = [ pvs, sub( b.mast_out, b.mast_out[:Gene].data .== g )[:(P-value)].data ]
        # end
        newmn = nanmean( log10( pvs ) )
        score_m[all_genes[g]] = newmn - mn ##/ (mn+0.1) ##+ ( isIn ? v_factor : -v_factor )
