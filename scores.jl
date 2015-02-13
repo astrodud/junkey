@@ -208,18 +208,18 @@ function get_cluster_meme_row_scores( b::bicluster )
     end
     df = sub( b.mast_out, findin( b.mast_out[:Gene], genes ) )
     #sz=size(df);#println("HERE MOT2 $sz")
-    mn::Float32 = nanmean( log10( df[:(P-value)].data ) )
+    mn::Float32 = nanmean( log10( df[:Pvalue].data ) )
     pvals::Dict{ASCIIString,Float32} = Dict{ASCIIString,Float32}()
-    for i in 1:size(b.mast_out,1) pvals[b.mast_out[:Gene].data[i]] = b.mast_out[:(P-value)].data[i]; end
+    for i in 1:size(b.mast_out,1) pvals[b.mast_out[:Gene].data[i]] = b.mast_out[:Pvalue].data[i]; end
     not_there = r_rownames[ ! in(r_rownames, b.mast_out[:Gene].data) ]
     for r in not_there pvals[r] = NA; end
     for g in r_rownames ## Iterate over rows
        isIn = in(genes, g) ##any(rows .== r) ## r is in the bicluster
        newR = isIn ? remove(genes,g) : [genes,[g]]
        pvs = float32( [ pvals[r] for r in newR ] )
-       # pvs = df[:(P-value)].data
-       # if isIn pvs = sub( df, df[:Gene].data .!= g )[:(P-value)].data
-       # else    pvs = [ pvs, sub( b.mast_out, b.mast_out[:Gene].data .== g )[:(P-value)].data ]
+       # pvs = df[:Pvalue].data
+       # if isIn pvs = sub( df, df[:Gene].data .!= g )[:Pvalue].data
+       # else    pvs = [ pvs, sub( b.mast_out, b.mast_out[:Gene].data .== g )[:Pvalue].data ]
        # end
        newmn = nanmean( log10( pvs ) )
        score_m[all_genes[g]] = newmn - mn ##/ (mn+0.1) ##+ ( isIn ? v_factor : -v_factor )

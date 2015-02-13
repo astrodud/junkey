@@ -155,11 +155,11 @@ function do_mast(memeOut, allSeqs_fname, get_allHitsTab=false, verbose=true)
             i += 1
         end
 
-        mastAllHitsTab = DataFrame( { "Gene" => convert( Array{ASCIIString}, tmpHitsTab[ :,1 ] ),
-                                      "Mot" => convert( Array{Int32}, tmpHitsTab[ :,2 ] ),
-                                      "Start" => convert( Array{Int64}, tmpHitsTab[ :,3 ] ),
-                                      "End" => convert( Array{Int64}, tmpHitsTab[ :,4 ] ),
-                                      "E-value" => convert( Array{Float32}, tmpHitsTab[ :,5 ] ) } )
+        mastAllHitsTab = DataFrame( Gene = convert( Array{ASCIIString}, tmpHitsTab[ :,1 ] ),
+                                   Mot = convert( Array{Int32}, tmpHitsTab[ :,2 ] ),
+                                   Start = convert( Array{Int64}, tmpHitsTab[ :,3 ] ),
+                                   End = convert( Array{Int64}, tmpHitsTab[ :,4 ] ),
+                                   Evalue = convert( Array{Float32}, tmpHitsTab[ :,5 ] ) )
     end ## get_allHitsTab
 
 ## This gets the table of sequence e-values (one value per sequence) -- need to parse it out
@@ -185,7 +185,7 @@ function do_mast(memeOut, allSeqs_fname, get_allHitsTab=false, verbose=true)
     #     mo_seq[ i ] = tmp[1]
     #     mo_ev[ i ] = parsefloat(tmp[2])
     # end
-    # mastOutTab = DataFrame( { "Gene" => mo_seq, "E-value" => mo_ev } )
+    # mastOutTab = DataFrame( { "Gene" => mo_seq, "Evalue" => mo_ev } )
 
 ## OK, now parse the 3rd section
     reg = r"COMBINED P-VALUE"
@@ -195,7 +195,7 @@ function do_mast(memeOut, allSeqs_fname, get_allHitsTab=false, verbose=true)
     tmp = [ match(r"COMBINED P-VALUE = (.+)(\s+E-VALUE = (.*))", mastOut[i]).captures[[1,3]] for i=lines ]
     pvals = float32( [ parsefloat( strip(tmp[i][1]) ) for i=1:length(tmp) ] )
     evals = float32( [ parsefloat( strip(tmp[i][2]) ) for i=1:length(tmp) ] )
-    mastOutTab = DataFrame( { "Gene" => genes, "E-value" => evals, "P-value" => pvals } )
+    mastOutTab = DataFrame( Gene = genes, Evalue = evals, Pvalue = pvals )
 
     rm( memeOutFname )
     #rm( allSeqs_fname )

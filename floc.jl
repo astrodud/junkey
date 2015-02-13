@@ -10,15 +10,15 @@ function get_floc_scoresDF_rows(cluster::bicluster, counts_g::Vector{Int32})
     score_m = weight_m > 0 ? cluster.scores_m : NAs
     score_vr = get_cluster_volume_row_scores( cluster, is_in_r )
     score_g = get_cluster_row_count_scores( cluster, counts_g, is_in_r )
-    out = DataFrame( { "row_col_ind" => inds,
-                      "is_in" => is_in_r,
-                      "is_row_col" => fill('r', length(cluster.scores_r)), ## CANT: move this outside the loop
-                      "k" => fill(cluster.k, length(cluster.scores_r)),
-                      "score" => score_r,
-                      "score_n" => score_n,
-                      "score_m" => score_m,
-                      "score_v" => score_vr,
-                      "score_g" => score_g } )
+    out = DataFrame( row_col_ind = inds,
+                    is_in = is_in_r,
+                    is_row_col = fill('r', length(cluster.scores_r)), ## CANT: move this outside the loop
+                    k = fill(cluster.k, length(cluster.scores_r)),
+                    score = score_r,
+                    score_n = score_n,
+                    score_m = score_m,
+                    score_v = score_vr,
+                    score_g = score_g )
     out
 end
 
@@ -29,15 +29,15 @@ function get_floc_scoresDF_cols(cluster::bicluster)
     NAs = fill(NA, length(cluster.scores_c))
     score_c = weight_c > 0 ? cluster.scores_c : NAs
     score_vc = get_cluster_volume_col_scores( cluster, is_in_c )
-    out = DataFrame( { "row_col_ind" => inds,
-                      "is_in" => is_in_c,
-                      "is_row_col" => fill('c', length(cluster.scores_c)), ## CANT: move this outside the loop
-                      "k" => fill(cluster.k, length(cluster.scores_c)),
-                      "score" => score_c,
-                      "score_n" => NAs, ## CANT: move this outside the loop
-                      "score_m" => NAs,  ## CANT: move this outside the loop
-                      "score_v" => score_vc,
-                      "score_g" => NAs } )
+    out = DataFrame( row_col_ind = inds,
+                    is_in = is_in_c,
+                    is_row_col = fill('c', length(cluster.scores_c)), ## CANT: move this outside the loop
+                    k = fill(cluster.k, length(cluster.scores_c)),
+                    score = score_c,
+                    score_n = NAs, ## CANT: move this outside the loop
+                    score_m = NAs,  ## CANT: move this outside the loop
+                    score_v = score_vc,
+                    score_g = NAs )
     out
 end
 
@@ -55,59 +55,59 @@ function get_floc_scores_all(clusters::Dict{Int64,bicluster}, max_row::Int64=999
 
     #scoresDF_r::DataFrame = mapreduce( k->get_floc_scoresDF_rows(clusters[k], k), vcat, 1:k_clust )
     tmp::Vector{DataFrame} = [get_floc_scoresDF_rows(clusters[k], counts_g) for k=1:k_clust]
-    scoresDF_r::DataFrame = rbind(tmp) ## This is much faster than mapreduce() above!!!
+    scoresDF_r::DataFrame = vcat(tmp) ## This is much faster than mapreduce() above!!!
 
     ## NEED TO STANDARDIZE ROWS AND COLUMNS SEPARATELY!!!   -- is this really what we want?
-    tmp_r = DataFrame( { "score" => convert(Vector{Float32}, scoresDF_r["score"] ),
-                        "score_n" => convert(Vector{Float32}, scoresDF_r["score_n"] ), 
-                        "score_m" => convert(Vector{Float32}, scoresDF_r["score_m"] ),
-                        "score_v" => convert(Vector{Float32}, scoresDF_r["score_v"] ),
-                        "score_g" => convert(Vector{Float32}, scoresDF_r["score_g"] ) } )
+    tmp_r = DataFrame( score = convert(Vector{Float32}, scoresDF_r[:score] ),
+                        score_n = convert(Vector{Float32}, scoresDF_r[:score_n] ), 
+                        score_m = convert(Vector{Float32}, scoresDF_r[:score_m] ),
+                        score_v = convert(Vector{Float32}, scoresDF_r[:score_v] ),
+                        score_g = convert(Vector{Float32}, scoresDF_r[:score_g] ) )
     ## Weights are set here: 
-    tmp1 = get_combined_scores( sdize_vector( tmp_r["score"].data ), sdize_vector( tmp_r["score_n"].data ), 
-                               sdize_vector( tmp_r["score_m"].data ), ##sdize_vector( tmp_r["score_v"].data ),
+    tmp1 = get_combined_scores( sdize_vector( tmp_r[:score].data ), sdize_vector( tmp_r[:score_n].data ), 
+                               sdize_vector( tmp_r[:score_m].data ), ##sdize_vector( tmp_r[score_v].data ),
                                ##sdize_vector( scores_g ) )
-                               sdize_vector(tmp_r["score_v"].data),
-                               sdize_vector(tmp_r["score_g"].data))
+                               sdize_vector(tmp_r[:score_v].data),
+                               sdize_vector(tmp_r[:score_g].data))
     tmp1 = sdize_vector( tmp1 )
-    scoresDF_r["combined"] = tmp1
+    scoresDF_r[:combined] = tmp1
 
     ##scoresDF_c::DataFrame = mapreduce( k->get_floc_scoresDF_cols(clusters[k], k), vcat, 1:k_clust )
     tmp = [get_floc_scoresDF_cols(clusters[k]) for k=1:k_clust]
-    scoresDF_c::DataFrame = rbind(tmp) ## This is much faster than mapreduce() above!!!
+    scoresDF_c::DataFrame = vcat(tmp) ## This is much faster than mapreduce() above!!!
     tmp_na::Vector{Float32} = float32( fill(NA, size(scoresDF_c,1)) )
 
-    tmp_c = DataFrame( { "score" => convert(Vector{Float32}, scoresDF_c["score"] ),
-                        "score_n" => tmp_na,
-                        "score_m" => tmp_na,
-                        "score_v" => convert(Vector{Float32}, scoresDF_c["score_v"] ),
-                        "score_g" => tmp_na } )
+    tmp_c = DataFrame( score = convert(Vector{Float32}, scoresDF_c[:score] ),
+                        score_n = tmp_na,
+                        score_m = tmp_na,
+                        score_v = convert(Vector{Float32}, scoresDF_c[:score_v] ),
+                        score_g = tmp_na )
     ## Weights are set here:
-    tmp1 = get_combined_scores( sdize_vector( tmp_c["score"].data ), tmp_na, ##tmp_c["score_n"].data, 
-                               tmp_na, ##tmp_c["score_m"].data, ##sdize_vector( tmp_c["score_v"].data ), 
-                               sdize_vector(tmp_c["score_v"].data), tmp_na ) ##tmp_c["score_g"].data )
+    tmp1 = get_combined_scores( sdize_vector( tmp_c[:score].data ), tmp_na, ##tmp_c["score_n"].data, 
+                               tmp_na, ##tmp_c[:score_m].data, ##sdize_vector( tmp_c["score_v"].data ), 
+                               sdize_vector(tmp_c[:score_v].data), tmp_na ) ##tmp_c["score_g"].data )
     (weight_r, weight_n, weight_m, weight_c, weight_v, weight_g) = get_score_weights() ## get weight_c to up-weight cols. vs. rows, if desired
     tmp1 = sdize_vector( tmp1 ) .* weight_c
-    scoresDF_c["combined"] = tmp1
+    scoresDF_c[:combined] = tmp1
 
-    if max_row <= maximum(scoresDF_r["row_col_ind"])
+    if max_row <= maximum(scoresDF_r[:row_col_ind])
         tmp_r = groupby( scoresDF_r, "k" )
         shrunk_r = Array(DataFrame, length(tmp_r))
         for i in 1:length(tmp_r) 
-            ord = sortperm( tmp_r[i]["combined"] )[1:max_row]
+            ord = sortperm( tmp_r[i][:combined] )[1:max_row]
             shrunk_r[i] = tmp_r[i][ ord, : ]
         end
-        scoresDF_r = rbind( shrunk_r )
+        scoresDF_r = vcat( shrunk_r )
     end
 
-    if max_row <= maximum(scoresDF_r["row_col_ind"])
+    if max_row <= maximum(scoresDF_r[:row_col_ind])
         tmp_c = groupby( scoresDF_c, "k" )
         shrunk_c = Array(DataFrame, length(tmp_c))
         for i in 1:length(tmp_c) 
-            ord = sortperm( tmp_c[i]["combined"] )[1:max_col]
+            ord = sortperm( tmp_c[i][:combined] )[1:max_col]
             shrunk_c[i] = tmp_c[i][ ord, : ]
         end
-        scoresDF_c = rbind( shrunk_c )
+        scoresDF_c = vcat( shrunk_c )
     end
 
     scores = vcat(scoresDF_r, scoresDF_c)
@@ -120,34 +120,36 @@ end
 
 ## Instead of scores for ALL possible moves, make a matrix of n_best best scores for each row/col
 function get_floc_scores_best( scores::DataFrame, n_best_row::Int64=3, n_best_col::Int64=3 )
-    dfs_r::Vector{AbstractDataFrame} = [ sub( scores, :(is_row_col .== 'r') ) ]
+    dfs_r = sub( scores, scores[:is_row_col] .== 'r' )
     if n_best_row < 9999  ## Now uses the nice functions in DataFrame like with() or group() or some such
-        tmp = groupby( dfs_r[1], "row_col_ind" ) ## Cool!
+        tmp = groupby( dfs_r, :row_col_ind ) ## Cool!
         dfs_r = Array(AbstractDataFrame, length(tmp))
         for r in 1:length(tmp)
             tmp2 = tmp[r] ##sub( tmp[r], :(row_col_ind .== row_col_ind[1]) )
-            if n_best_row == 1 ord = findmin( tmp2["combined"] )[2]
+            if n_best_row == 1 ord = findmin( tmp2[:combined] )[2]
             elseif n_best_row >= size(tmp2, 1) ord = 1:size(tmp2, 1)
-            else ord = sortperm( tmp2["combined"] )[ 1:n_best_row ]
+            else ord = sortperm( tmp2[:combined] )[ 1:n_best_row ]
             end
             dfs_r[r] = tmp2[ ord, : ]
         end
+        dfs_r = vcat( dfs_r )
     end
 
-    dfs_c::Vector{AbstractDataFrame} = [ sub( scores, :(is_row_col .== 'c') ) ]
+    dfs_c = sub( scores, scores[:is_row_col] .== 'c' )
     if n_best_col < 9999  ## Now uses the nice functions in DataFrame like with() or group() or some such
-        tmp = groupby( dfs_c[1], "row_col_ind" ) ## Cool!
+        tmp = groupby( dfs_c, :row_col_ind ) ## Cool!
         dfs_c = Array(AbstractDataFrame, length(tmp))
         for c in 1:length(tmp)
             tmp2 = tmp[c] ##sub( tmp[c], :(row_col_ind .== $c) )
-            if n_best_col == 1 ord = findmin( tmp2["combined"] )[2]
+            if n_best_col == 1 ord = findmin( tmp2[:combined] )[2]
             elseif n_best_col >= size(tmp2, 1) ord = 1:size(tmp2, 1)
-            else ord = sortperm( tmp2["combined"] )[ 1:n_best_col ]
+            else ord = sortperm( tmp2[:combined] )[ 1:n_best_col ]
             end
             dfs_c[c] = tmp2[ ord,: ]
         end
+        dfs_c = vcat( dfs_c )
     end
-    scores2 = rbind( rbind( dfs_r ), rbind( dfs_c ) )
+    scores2 = vcat( dfs_r, dfs_c )
     scores2
 end
 
@@ -195,7 +197,7 @@ function floc_update(clusters::Dict{Int64,bicluster}, max_no_improvements=25)
     ##    which to perform the moves.
     ## Note this is wrong right now - it sorts ALL k scores for each row/col. 
     ##  Need to just use the BEST score for each row/col and then bubblesort these.
-    ord::Vector{Int32} = rnd_bubblesort(convert(Vector{Float32}, scores2["combined"])) ##, n_sort_iter) 
+    ord::Vector{Int32} = rnd_bubblesort(convert(Vector{Float32}, scores2[:combined])) ##, n_sort_iter) 
     println( head(scores2[ord,:]), "\n", tail(scores2[ord,:]) )
 
     new_clusters = saved_clusters = copy_clusters( clusters, true, false ); ## make a copy for updating
@@ -215,20 +217,20 @@ function floc_update(clusters::Dict{Int64,bicluster}, max_no_improvements=25)
     n_improvements = 0; n_tries = 0
     for i=ord ## Update bicusters -- should "store" the one with the best mean resid during the updates
         sc = scores2[i,:]
-        kUpd = sc["k"][1]
+        kUpd = sc[:k][1]
         cc::bicluster = copy_cluster(new_clusters[kUpd], true, true)
-        row_col = sc["row_col_ind"][1]
-        if sc["is_row_col"][1] == 'r'
-            ##if sc["is_in"][1] && length(cc.rows) <= min_rows continue; end ## Don't remove if we're already at the min. Now: use volume score instead
-            cc.rows = sc["is_in"][1] ? remove(cc.rows, row_col) : [cc.rows, row_col]
+        row_col = sc[:row_col_ind][1]
+        if sc[:is_row_col][1] == 'r'
+            ##if sc[:is_in][1] && length(cc.rows) <= min_rows continue; end ## Don't remove if we're already at the min. Now: use volume score instead
+            cc.rows = sc[:is_in][1] ? remove(cc.rows, row_col) : [cc.rows, row_col]
             cc.changed[1] = true
-        elseif sc["is_row_col"][1] == 'c'
-            cc.cols = sc["is_in"][1] ? remove(cc.cols, row_col) : [cc.cols, row_col]
+        elseif sc[:is_row_col][1] == 'c'
+            cc.cols = sc[:is_in][1] ? remove(cc.cols, row_col) : [cc.cols, row_col]
             cc.changed[2] = true
         end
         cc.resid = bicluster_residue( cc, ratios )
         all_resids[kUpd] = cc.resid
-        if sc["is_row_col"][1] == 'r'  ## Only update network/motif scores if it's a row, duh!
+        if sc[:is_row_col][1] == 'r'  ## Only update network/motif scores if it's a row, duh!
             if abs(weight_n) > 0            ## only compute if need to
                 cc.dens_string = bicluster_network_density( cc, string_net )
                 all_dens_string[kUpd] = cc.dens_string
@@ -239,9 +241,9 @@ function floc_update(clusters::Dict{Int64,bicluster}, max_no_improvements=25)
             end
             ## TODO: incorporate score_g (nclust per gene) and score_v (ngene per clust) into combined scores
 #             if weight_g > 0 
-#                 counts_gene[ row_col ] += (sc["is_in"][1] ? -1 : 1) ## Clusters per gene score
+#                 counts_gene[ row_col ] += (sc[:is_in][1] ? -1 : 1) ## Clusters per gene score
 #                 mean_score_gene = nanmean(get_cluster_row_count_scores(cc, counts_gene)) ## Clusters per gene score
-#                 counts_gene[ row_col ] -= (sc["is_in"][1] ? -1 : 1) ## revert it back
+#                 counts_gene[ row_col ] -= (sc[:is_in][1] ? -1 : 1) ## revert it back
 #             end
         end
         ##all_scores[kUpd] = get_combined_score( cc.resid, cc.dens_string, cc.meanp_meme, 0.0f0 )
@@ -265,7 +267,7 @@ function floc_update(clusters::Dict{Int64,bicluster}, max_no_improvements=25)
             saved_clusters = copy_clusters( new_clusters, false, false ) ## make a copy to keep the best update
             output = @sprintf( "%d %.4f %.4f %.4f %.4f %d %c %s %d %.4f %.4f %.4f %d %d %d",
                               i, mean_resid, mean_dens_string, mean_meanp_meme, score_delta, ##mean_scores,
-                              Base.int(kUpd), sc["is_row_col"][1], sc["is_in"][1]?"remove":"add", row_col, 
+                              Base.int(kUpd), sc[:is_row_col][1], sc[:is_in][1]?"remove":"add", row_col, 
                               cc.resid, clusters[kUpd].resid, cc.resid-clusters[kUpd].resid, 
                               n_tries, n_improvements, no_improvements)
             println( output )
@@ -314,8 +316,8 @@ function do_floc(clusters::Dict{Int64,bicluster})
     stats_df["N_IMPROVEMENTS"] = n_improvements
     stats_df["N_CLUSTS_CHANGED_ROWS"] = changed_rows
     stats_df["N_CLUSTS_CHANGED_COLS"] = changed_cols
-    println( "N_CLUSTS_CHANGED (ROWS): ", stats_df["N_CLUSTS_CHANGED_ROWS"] )
-    println( "N_CLUSTS_CHANGED (COLS): ", stats_df["N_CLUSTS_CHANGED_COLS"] )
+    println( "N_CLUSTS_CHANGED (ROWS): ", stats_df[:N_CLUSTS_CHANGED_ROWS] )
+    println( "N_CLUSTS_CHANGED (COLS): ", stats_df[:N_CLUSTS_CHANGED_COLS] )
     gc()
     (clusters, n_improvements, stats_df)
 end

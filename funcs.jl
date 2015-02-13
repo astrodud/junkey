@@ -6,7 +6,7 @@ function run_junkey()
         iter = i
         (clusters, n_improvements, stats_tmp) = do_floc( clusters );
         println( @sprintf( "%.3f", (time() - startTime)/60 ), " minutes since initialization" )
-        stats_df = rbind( stats_df, stats_tmp )
+        stats_df = vcat( stats_df, stats_tmp )
         write_table( "output/$(organism)_stats.tsv", stats_df )
         if isfile( "DO_SAVE" )  ## save cluster info for temporary examination of clusters (via Rscripts/clusters.R)
             warn( "Writing out clusters to output/$(organism)_clusters.tsv" )
@@ -279,9 +279,9 @@ function bicluster_network_density( b::bicluster, network::DataFrame )
 end
 
 function bicluster_network_density( rows::Vector{ASCIIString}, network::DataFrame )
-    net1 = sub( network, findin( network["x1"], rows ) )
-    net2 = sub( net1, findin( net1["x2"], rows ) )
-    dens = sum( net2["x3"] ) / length(rows)^2 ## Already symmetrized, need to decrease count by 1/2
+    net1 = sub( network, findin( network[:x1], rows ) )
+    net2 = sub( net1, findin( net1[:x2], rows ) )
+    dens = sum( net2[:x3] ) / length(rows)^2 ## Already symmetrized, need to decrease count by 1/2
     log10( dens+1e-9 )
 end
 
@@ -292,8 +292,8 @@ function bicluster_meme_pval( b::bicluster )
     rows = b.rows
     genes = rownames(ratios)[rows]
     ## TODO: don't only use values for genes that are in the ratios matrix.
-    df = sub( b.mast_out, in( b.mast_out["Gene"].data, genes ) )
-    mn = nanmean( log10( df["P-value"].data ) )
+    df = sub( b.mast_out, in( b.mast_out[:Gene].data, genes ) )
+    mn = nanmean( log10( df[:Pvalue].data ) )
     mn
 end
 
@@ -302,10 +302,10 @@ end
 ## Find the flagellar cluster, whew!!!
 function clusters_w_func( func::ASCIIString, clusters, n_best=1 )
     global anno, ratios
-    inds = findn([ismatch(Regex(func),anno["desc"][i]) for i=1:size(anno,1)] .== true)
+    inds = findn([ismatch(Regex(func),anno[:desc][i]) for i=1:size(anno,1)] .== true)
     r_rownames = rownames(ratios)
-    inds2 = int32([in(r_rownames, anno["sysName"][i]) ? 
-                   findn(r_rownames .== anno["sysName"][i])[1] : 0 for i=inds])
+    inds2 = int32([in(r_rownames, anno[:sysName][i]) ? 
+                   findn(r_rownames .== anno[:sysName][i])[1] : 0 for i=inds])
     inds2 = inds2[ inds2 .!= 0 ]
 
     ord = sortperm( int64([length(findin(clusters[k].rows,int64(inds2))) for k=1:length(clusters)]) )
@@ -315,8 +315,8 @@ function clusters_w_func( func::ASCIIString, clusters, n_best=1 )
     for kInd in kInds
         genes = r_rownames[clusters[kInd].rows] ##rows]
         ##println(genes) ## print the genes
-        genes = genes[ findin(genes, anno["sysName"].data) ]
-        println(kInd, "\n", anno[in(anno["sysName"].data,genes),["sysName","desc"]])
+        genes = genes[ findin(genes, anno[:sysName].data) ]
+        println(kInd, "\n", anno[in(anno[:sysName].data,genes),[:sysName,:desc]])
     end
     kInds
 end
@@ -339,32 +339,32 @@ function print_cluster_stats( clusters::Dict{Int64,bicluster} )
         tmp = sum([ parse_int(tmp[i]) for i=1:(length(tmp)-1) ])
     end
     (weight_r, weight_n, weight_m, weight_c, weight_v) = get_score_weights()
-    out_df = DataFrame( { "iter" => iter, "time" => time_elapsed, "mem_used" => tmp, 
-                         "r0" => weight_r, "n0" => weight_n, "m0" => weight_m, 
-                         "c0" => weight_c, "v0" => weight_v } )
+    out_df = DataFrame( iter=iter, time=time_elapsed, mem_used=tmp, 
+                       r0=weight_r, n0=weight_n, m0=weight_m, 
+                       c0=weight_c, v0=weight_v )
     tmp = float32([length(clusters[k].rows) for k=1:k_clust])
-    out_df["ROWS"] = nanmean(tmp)
-    println( "ROWS: ", out_df["ROWS"][1], " +/- ", nansd(tmp) )
+    out_df[:ROWS] = nanmean(tmp)
+    println( "ROWS: ", out_df[:ROWS][1], " +/- ", nansd(tmp) )
     tmp = float32([length(clusters[k].cols) for k=1:k_clust])
-    out_df["COLS"] = nanmean(tmp)
-    println( "COLS: ", out_df["COLS"][1], " +/- ", nansd(tmp) )
+    out_df[:COLS] = nanmean(tmp)
+    println( "COLS: ", out_df[:COLS][1], " +/- ", nansd(tmp) )
     tmp = float32([clusters[k].resid for k=1:k_clust])
-    out_df["RESID"] = nanmean(tmp)
-    println( "MEAN RESID: ", out_df["RESID"][1], " +/- ", nansd(tmp) )
+    out_df[:RESID] = nanmean(tmp)
+    println( "MEAN RESID: ", out_df[:RESID][1], " +/- ", nansd(tmp) )
     tmp = float32([clusters[k].dens_string for k=1:k_clust])
-    out_df["STRING_DENS"] = nanmean(tmp)
-    println( "MEAN STRING DENS: ", out_df["STRING_DENS"][1], " +/- ", nansd(tmp) )
+    out_df[:STRING_DENS] = nanmean(tmp)
+    println( "MEAN STRING DENS: ", out_df[:STRING_DENS][1], " +/- ", nansd(tmp) )
     tmp = float32([clusters[k].meanp_meme for k=1:k_clust])
-    out_df["MEME_PVAL"] = nanmean(tmp)
-    println( "MEAN MEME LOG10(P-VAL): ", out_df["MEME_PVAL"][1], " +/- ", nansd(tmp) )
+    out_df[:MEME_PVAL] = nanmean(tmp)
+    println( "MEAN MEME LOG10(P-VAL): ", out_df[:MEME_PVAL][1], " +/- ", nansd(tmp) )
     rows = 0; for k in 1:k_clust rows = [rows, clusters[k].rows]; end
     tmp = float32(collect(values(table(rows))))
-    out_df["CLUSTS_PER_ROW"] = nanmean(tmp)
-    println( "CLUSTS PER ROW: ", out_df["CLUSTS_PER_ROW"][1], " +/- ", nansd(tmp) )
+    out_df[:CLUSTS_PER_ROW] = nanmean(tmp)
+    println( "CLUSTS PER ROW: ", out_df[:CLUSTS_PER_ROW][1], " +/- ", nansd(tmp) )
     cols = 0; for k in 1:k_clust cols = [cols, clusters[k].cols]; end
     tmp = float32(collect(values(table(cols))))
-    out_df["CLUSTS_PER_COL"] = nanmean(tmp)
-    println( "CLUSTS PER COL: ", out_df["CLUSTS_PER_COL"][1], " +/- ", nansd(tmp) )
+    out_df[:CLUSTS_PER_COL] = nanmean(tmp)
+    println( "CLUSTS PER COL: ", out_df[:CLUSTS_PER_COL][1], " +/- ", nansd(tmp) )
     out_df
 end
 
@@ -372,15 +372,15 @@ function clusters_to_dataFrame( clusters::Dict{Int64,bicluster} )
     out = Array(DataFrame,length(clusters))
     for k in 1:length(clusters)
         b = clusters[k]
-        out_r = DataFrame( { "k" => k,
-                            "rows" => [join(rownames(ratios)[b.rows],',')],
-                            "resid" => b.resid,
-                            "dens_string" => b.dens_string,
-                            "meanp_meme" => b.meanp_meme,
-                            "cols" => [join(colnames(ratios)[b.cols],',')],
-                            "meme_out" => [join(b.meme_out,"<<<<>>>>")] 
-                            } )
+        out_r  =  DataFrame( k = k,
+                          rows = [join(rownames(ratios)[b.rows],',')],
+                          resid = b.resid,
+                          dens_string = b.dens_string,
+                          meanp_meme = b.meanp_meme,
+                          cols = [join(colnames(ratios)[b.cols],',')],
+                          meme_out = [join(b.meme_out,"<<<<>>>>")] 
+                          )
         out[k] = out_r
     end
-    rbind(out)
+    vcat(out)
 end
