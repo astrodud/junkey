@@ -3,6 +3,8 @@ using Distributions
 #import Distributions.sample
 using DataFrames
 using GZip
+##TODO: use NamedArrays package...
+## n = NamedArray(rand(2,4),(["A","B"],["Q","R","S","T"]),("string","string")
 
 try
     include( "NamedMatrix.jl" ) ## catch it so the rest of this file can be require()-ed without an error
