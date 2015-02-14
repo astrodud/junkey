@@ -12,10 +12,10 @@ packages.
 <a name="Running"/>
 ## To run
 
-Change to the directory **above** the junkey directory and start julia
+Change to the directory **containing** the junkey code and start julia
 
 in Julia: 
 
-    julia> load("junkey/main.jl")
+    julia> include("main.jl")
 
 will run the algorithm on the default (H. pylori), for 100 iterations. Will take ~1/2 hour.

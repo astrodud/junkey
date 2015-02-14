@@ -1,6 +1,8 @@
 ## TODO: use pfork from PTools package -- need to write the equiv of a pmap() function.
 ## TODO: use named function arguments instead of all the multiply-defined funcs here
 ## TODO: (NOTE saving doesn't work right for my data types yet): use HDF5 and JLD to save data (and possibly to use filehash-like feature... see https://groups.google.com/forum/?fromgroups=#!topic/julia-users/6Kq20HHgOYY and https://github.com/timholy/HDF5.jl
+##TODO: use NamedArrays package...
+## n = NamedArray(rand(2,4),(["A","B"],["Q","R","S","T"]),("string","string")
 
 ## MAIN PROGRAM
 
@@ -17,8 +19,7 @@ end   ## @everywhere
 
 if myid() == 1 ## This stuff below should ONLY run on the head node
 
-(ratios, genome_seqs, anno, op_table, string_net, allSeqs_fname, all_bgFreqs, all_genes) = \
-    junkey_init(organism, k_clust);
+(ratios, genome_seqs, anno, op_table, string_net, allSeqs_fname, all_bgFreqs, all_genes) = junkey_init(organism, k_clust);
 
 reload( "./params.jl" ) ## include this again to set data-dependent defaults (e.g. k_clust=nrow(ratios)/10)
 
