@@ -198,7 +198,7 @@ function floc_update(clusters::Dict{Int64,bicluster}, max_no_improvements=25)
     ## Note this is wrong right now - it sorts ALL k scores for each row/col. 
     ##  Need to just use the BEST score for each row/col and then bubblesort these.
     ord::Vector{Int32} = rnd_bubblesort(convert(Vector{Float32}, scores2[:combined])) ##, n_sort_iter) 
-    println( head(scores2[ord,:]), "\n", tail(scores2[ord,:]) )
+    #println( head(scores2[ord,:]), "\n", tail(scores2[ord,:]) )
 
     new_clusters = saved_clusters = copy_clusters( clusters, true, false ); ## make a copy for updating
     (weight_r, weight_n, weight_m, weight_c, weight_v, weight_g) = get_score_weights() ## DONE: don't need to update n or m scores if their weights are 0
@@ -280,44 +280,31 @@ function floc_update(clusters::Dict{Int64,bicluster}, max_no_improvements=25)
     (saved_clusters, n_improvements, n_tries, scores2[ord,:])
 end
 
-function do_floc(clusters::Dict{Int64,bicluster})
-    global iter, k_clust, max_improvements_per_iter
-    ##clusters = fill_cluster_scores(clusters) ## dont need this since each cluster's scores are updated in floc_update
-    ## allow more updates if there are more clusters??? Tuned to k_clust/2 for Hpy (where k_clust is 75) -- 
-    ##    may need additional tuning; e.g. for eco (k_clust=450), k_clust/2 is too high
-    (clusters, n_improvements, n_tries, scores) = floc_update(clusters, max_improvements_per_iter); 
-    (weight_r, weight_n, weight_m, weight_c, weight_v, weight_g) = get_score_weights( iter )
-    (weight_r_new, weight_n_new, weight_m_new, weight_c_new, weight_v_new, weight_g_new) = get_score_weights( iter + 1 )
-    n_motifs = get_n_motifs()
-    n_motifs_new = get_n_motifs(iter+1, n_iters)
-    if ( abs(weight_n) <= 0 && abs(weight_n_new) > 0 ) || ( weight_m <= 0 && weight_m_new > 0 ) || ( n_motifs != n_motifs_new )
-        for k in 1:k_clust clusters[k].changed[1] = true; end ## in this instance, need to force update of all clusters
-    end
-    iter += 1 ## now update clusters as if the new iteration has started
-    changed_rows = sum( [clusters[k].changed[1] for k=1:k_clust] )
-    changed_cols = sum( [clusters[k].changed[2] for k=1:k_clust] )
-    ## First, do the meme/mast-ing in parallel (only if m0 > 0)
-    (weight_r, weight_n, weight_m, weight_c, weight_v) = get_score_weights()
-    clusters = re_seed_all_clusters_if_necessary(clusters) ## avoid meme-ing 0-gene clusters
-    if weight_m > 0 
-        if nprocs() <= 1 clusters = re_meme_all_biclusters(clusters, false)
-        else clusters = re_meme_all_biclusters_parallel(clusters, false); end
-    end
-    ## Next fill the clusters' scores (in parallel)
-    if nprocs() <= 1 clusters = fill_all_cluster_scores( clusters, false, false );
-    else clusters = fill_all_cluster_scores_parallel( clusters, false, false ); end
-    println( "ITER: ", iter )
-    println( @sprintf( "r0: %.3f; n0: %.3f; m0: %.3f; c0: %.3f; v0: %.3f, g0: %.3f", weight_r, weight_n, weight_m, 
-                      weight_c, weight_v, weight_g ) )
-    println( "N_MOVES: ", n_tries )
-    println( "N_IMPROVEMENTS: ", n_improvements )
-    stats_df = print_cluster_stats(clusters)
-    stats_df["N_MOVES"] = n_tries
-    stats_df["N_IMPROVEMENTS"] = n_improvements
-    stats_df["N_CLUSTS_CHANGED_ROWS"] = changed_rows
-    stats_df["N_CLUSTS_CHANGED_COLS"] = changed_cols
-    println( "N_CLUSTS_CHANGED (ROWS): ", stats_df[:N_CLUSTS_CHANGED_ROWS] )
-    println( "N_CLUSTS_CHANGED (COLS): ", stats_df[:N_CLUSTS_CHANGED_COLS] )
-    gc()
-    (clusters, n_improvements, stats_df)
-end
+## function do_floc(clusters::Dict{Int64,bicluster})
+##     global iter, k_clust, max_improvements_per_iter
+##     ##clusters = fill_cluster_scores(clusters) ## dont need this since each cluster's scores are updated in floc_update
+##     ## allow more updates if there are more clusters??? Tuned to k_clust/2 for Hpy (where k_clust is 75) -- 
+##     ##    may need additional tuning; e.g. for eco (k_clust=450), k_clust/2 is too high
+##     (clusters, n_improvements, n_tries, scores) = floc_update(clusters, max_improvements_per_iter); 
+##     (weight_r, weight_n, weight_m, weight_c, weight_v, weight_g) = get_score_weights( iter )
+##     (weight_r_new, weight_n_new, weight_m_new, weight_c_new, weight_v_new, weight_g_new) = get_score_weights( iter + 1 )
+##     n_motifs = get_n_motifs()
+##     n_motifs_new = get_n_motifs(iter+1, n_iters)
+##     if ( abs(weight_n) <= 0 && abs(weight_n_new) > 0 ) || ( weight_m <= 0 && weight_m_new > 0 ) || ( n_motifs != n_motifs_new )
+##         for k in 1:k_clust clusters[k].changed[1] = true; end ## in this instance, need to force update of all clusters
+##     end
+##     iter += 1 ## now update clusters as if the new iteration has started
+##     changed_rows = sum( [clusters[k].changed[1] for k=1:k_clust] )
+##     changed_cols = sum( [clusters[k].changed[2] for k=1:k_clust] )
+##     ## First, do the meme/mast-ing in parallel (only if m0 > 0)
+##     (weight_r, weight_n, weight_m, weight_c, weight_v) = get_score_weights()
+##     clusters = re_seed_all_clusters_if_necessary(clusters) ## avoid meme-ing 0-gene clusters
+##     if weight_m > 0 
+##         if nprocs() <= 1 clusters = re_meme_all_biclusters(clusters, false)
+##         else clusters = re_meme_all_biclusters_parallel(clusters, false); end
+##     end
+##     ## Next fill the clusters' scores (in parallel)
+##     if nprocs() <= 1 clusters = fill_all_cluster_scores( clusters, false, false );
+##     else clusters = fill_all_cluster_scores_parallel( clusters, false, false ); end
+##     (clusters, n_improvements)
+## end

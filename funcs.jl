@@ -4,20 +4,68 @@ function run_junkey()
     n_no_improvements = 0
     for i=iter:n_iters
         iter = i
-        (clusters, n_improvements, stats_tmp) = do_floc( clusters );
+        (clusters, n_tries, n_improvements) = update_all_clusters( clusters );
+        (weight_r, weight_n, weight_m, weight_c, weight_v, weight_g) = get_score_weights()
+        println( "ITER: ", iter )
         println( @sprintf( "%.3f", (time() - startTime)/60 ), " minutes since initialization" )
+        println( @sprintf( "r0: %.3f; n0: %.3f; m0: %.3f; c0: %.3f; v0: %.3f, g0: %.3f", weight_r, weight_n, weight_m, 
+                          weight_c, weight_v, weight_g ) )
+        println( "N_MOVES: ", n_tries )
+        println( "N_IMPROVEMENTS: ", n_improvements )
+        stats_tmp = print_cluster_stats(clusters)
+        stats_tmp[:N_MOVES] = n_tries
+        stats_tmp[:N_IMPROVEMENTS] = n_improvements
+        changed_rows = sum( [clusters[k].changed[1] for k=1:k_clust] )
+        changed_cols = sum( [clusters[k].changed[2] for k=1:k_clust] )
+        stats_tmp[:N_CLUSTS_CHANGED_ROWS] = changed_rows
+        stats_tmp[:N_CLUSTS_CHANGED_COLS] = changed_cols
+        println( "N_CLUSTS_CHANGED (ROWS): ", stats_tmp[:N_CLUSTS_CHANGED_ROWS] )
+        println( "N_CLUSTS_CHANGED (COLS): ", stats_tmp[:N_CLUSTS_CHANGED_COLS] )
         stats_df = vcat( stats_df, stats_tmp )
-        write_table( "output/$(organism)_stats.tsv", stats_df )
+        writetable( "output/$(organism)_stats.tsv", stats_df )
         if isfile( "DO_SAVE" )  ## save cluster info for temporary examination of clusters (via Rscripts/clusters.R)
             warn( "Writing out clusters to output/$(organism)_clusters.tsv" )
             clusters_tab = clusters_to_dataFrame(clusters);
-            write_table("output/$(organism)_clusters.tsv", clusters_tab)
+            writetable("output/$(organism)_clusters.tsv", clusters_tab)
         end
+        gc()
         if n_improvements <= 0 n_no_improvements += 1 else n_no_improvements = 0; end
         if iter > n_iters/2 && n_no_improvements > 5 break; end
     end
 end
 
+function update_all_clusters( clusters::Dict{Int64,bicluster} )
+    global iter, k_clust
+
+    (clusters, n_improvements, n_tries, scores) = floc_update(clusters, max_improvements_per_iter); 
+    
+    (weight_r, weight_n, weight_m, weight_c, weight_v, weight_g) = get_score_weights( iter )
+    (weight_r_new, weight_n_new, weight_m_new, weight_c_new, weight_v_new, weight_g_new) = get_score_weights( iter + 1 )
+    n_motifs = get_n_motifs()
+    n_motifs_new = get_n_motifs(iter+1, n_iters)
+    if ( abs(weight_n) <= 0 && abs(weight_n_new) > 0 ) || ( weight_m <= 0 && weight_m_new > 0 ) ||
+        ( n_motifs != n_motifs_new )
+        for k in 1:k_clust clusters[k].changed[1] = true; end ## in this instance, need to force update of all clusters
+    end
+
+    iter += 1 ## now update clusters as if the new iteration has started
+    #changed_rows = sum( [clusters[k].changed[1] for k=1:k_clust] )
+    #changed_cols = sum( [clusters[k].changed[2] for k=1:k_clust] )
+            
+    ## First, do the meme/mast-ing in parallel (only if m0 > 0)
+    (weight_r, weight_n, weight_m, weight_c, weight_v) = get_score_weights()
+    clusters = re_seed_all_clusters_if_necessary(clusters) ## avoid meme-ing 0-gene clusters
+    if weight_m > 0 
+        if nprocs() <= 1 clusters = re_meme_all_biclusters(clusters, false)
+        else clusters = re_meme_all_biclusters_parallel(clusters, false); end
+    end
+
+    ## Next fill the clusters' scores (in parallel)
+    if nprocs() <= 1 clusters = fill_all_cluster_scores( clusters, false, false );
+    else clusters = fill_all_cluster_scores_parallel( clusters, false, false ); end
+    (clusters, n_tries, n_improvements)
+end
+        
 function copy_cluster( cc::bicluster, full=true, everything=true )
     out = cc
     if everything ## make copies of everything
